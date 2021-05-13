@@ -1,7 +1,14 @@
 from dataclasses import dataclass
 from typing import Callable, Dict, List, Optional, Type, Union
 from flags import Flags
+import struct
+import logging
 
+BYTE_ORDER = ">"  # > big-endian, < little-endian
+
+
+
+log = logging.getLogger("Commands")
 
 @dataclass
 class BBValue:
@@ -11,11 +18,26 @@ class BBValue:
     output_id: str
     conversion_fn: Optional[Callable] = None
 
+    def value(self, raw_value):
+        if self.struct == "¾":
+            raw_value = struct.unpack(">I", b"\0" + raw_value)[0]
+        if not self.conversion_fn:
+            return raw_value
+        else:
+            return self.conversion_fn(raw_value)
+
+    def get_struct(self):
+        if not self.struct == "¾":
+            return self.struct
+        return "3s"
 
 class BBValueIgnore(BBValue):
     def __init__(self, byte_count=1):
         self.struct = f"{byte_count}x"
         self.output_id = ""
+
+    def value(self, raw_value):
+        return None
 
 
 @dataclass
@@ -56,9 +78,22 @@ def cnv_bb_temp_to_deg_c(bb_temp):
 def cnv_solar_status(status):
     return {0: "active", 1: "standby", 2: "reduced"}.get(status, "unknown")
 
-
+@dataclass
 class BBFrame:
-    FIELDS: List[BBValue] = []
+    output_id: str
+    fields: List[BBValue]
+
+    def format(self):
+        return BYTE_ORDER + "".join(field.get_struct() for field in self.fields)
+
+    def process(self, value):
+        non_ignore_fields = filter(lambda field: type(field) is not BBValueIgnore, self.fields)
+        return (self.output_id, {
+            field.output_id: field.value(raw_value)
+            for field, raw_value in zip(
+                non_ignore_fields, struct.unpack_from(self.format(), value)
+            )
+        })
 
 
 @dataclass
@@ -66,17 +101,26 @@ class FrameTypeSwitch:
     index_byte: str
     frame_types: Dict[int, Type[BBFrame]]
 
+    def process(self, value):
+        index_value = struct.unpack_from(BYTE_ORDER + self.index_byte, value)
+        if not index_value in self.frame_types:
+            raise Exception(f"Frame type not found: {index_value!r}")
+        log.debug(f"Selected index: {index_value}.")
+        
+        return self.frame_types[index_value].process(value)
+
 
 @dataclass
 class BBCommand:
     GATT_CHARACTERISTIC: str
-    BYTE_ORDER: str = ">"  # > big-endian, < little-endian
-    READ = Union[Type[BBFrame], FrameTypeSwitch]
-    WRITE = Type[BBFrame]
+    READ: Optional[Union[Type[BBFrame], FrameTypeSwitch]] = None
+    WRITE: Optional[Type[BBFrame]] = None
+
+    def process(self, value):
+        return self.READ.process(value)
 
 
-class SecFrame(BBFrame):
-    FIELDS = [BBValue("i", "time_of_day_s")]
+SecFrame = BBFrame(output_id="sec", fields=[BBValue("i", "time_of_day_s")])
 
 
 class Sec(BBCommand):
@@ -85,13 +129,14 @@ class Sec(BBCommand):
     Log entry is generated when seconds reach 86400 (24 Hours) and seconds are reset to 0.
     """
 
-    GATT_CHARACTERISTIC = "4B616901-40bd-428b-bf06-698e5e422cd9"
+    GATT_CHARACTERISTIC = "4b616901-40bd-428b-bf06-698e5e422cd9"
     READ = SecFrame
     WRITE = SecFrame
 
 
-class LogEntryDaysFrame(BBFrame):
-    FIELDS = [
+LogEntryDaysFrame = BBFrame(
+    output_id="log/entry_day",
+    fields=[
         # bytes 0-1: big endian 16 bit mWh per day**
         BBValue("H", "Wh_day", cnv_mW_to_W),
         # bytes 2-3: big endian 16-bit max mW per Day**
@@ -133,10 +178,11 @@ class LogEntryDaysFrame(BBFrame):
         # bytes 37-38: big endian 16-bit total booster charge per day 100 mAh (V304)**
         BBValue("H", "total_booster_charge_day_Ah", cnv_100mA_to_A),
     ]
+)
 
-
-class LogEntryFrame(BBFrame):
-    FIELDS = [
+LogEntryFrame = BBFrame(
+    output_id="log/entry",
+    fields=[
         # bytes 0-1: 16-bit day counter (relative to current day in frame type 0x00)
         BBValue("H", "log0_day_counter"),
         # bytes 2-3: 16-bit wall time in seconds/2
@@ -146,7 +192,7 @@ class LogEntryFrame(BBFrame):
         # bytes 6-7: 16-bit average solar current mA
         BBValue("H", "log0_avg_solar_current_A", cnv_mA_to_A),
         # bytes 8: solar charger status: aktiv, standby, reduced
-        BBValue("c", "log0_solar_charger_status", cnv_solar_status),
+        BBValue("B", "log0_solar_charger_status", cnv_solar_status),
         # bytes 9-10: 16-bit average battery current 100 mA
         BBValue("H", "log0_avg_battery_current_A", cnv_100mA_to_A),
         # bytes 11-12: 16-bit battery SOC 100 mAh
@@ -160,6 +206,7 @@ class LogEntryFrame(BBFrame):
         # byte 36: 8-bit frame type 0x01
         BBValueIgnore(),
     ]
+)
 
 
 class Log(BBCommand):
@@ -170,7 +217,7 @@ class Log(BBCommand):
     Note: Reading "sec" characteristics resets read pointer to earliest available log entry.
     """
 
-    GATT_CHARACTERISTIC = "4B616907-40bd-428b-bf06-698e5e422cd9"
+    GATT_CHARACTERISTIC = "4b616907-40bd-428b-bf06-698e5e422cd9"
     READ = FrameTypeSwitch(
         "36xc",  # 36th byte is the frame type indicator
         {
@@ -180,11 +227,12 @@ class Log(BBCommand):
     )
 
 
-class BCLiveMeasurementsFrame(BBFrame):
-    FIELDS = [
+BCLiveMeasurementsFrame = BBFrame(
+    output_id="live/measurement",
+    fields=[
         # byte 0: type
         # byte 1: length
-        BBValueIgnore("cc"),
+        BBValueIgnore(2),
         # 2 bytes (17) value battery voltage in mV
         BBValue("H", "battery_voltage_V", cnv_mV_to_V),
         # 2 bytes (18) value solar charge current in 10mA**
@@ -192,13 +240,14 @@ class BCLiveMeasurementsFrame(BBFrame):
         # 3 bytes (00) value Battery Current in mA
         BBValue("¾", "battery_current_A", cnv_mA_to_A),
     ]
+)
 
-
-class BCSolarChargerEBLFrame(BBFrame):
-    FIELDS = [
+BCSolarChargerEBLFrame = BBFrame(
+    output_id="live/solar_charger_ebl",
+    fields=[
         # byte 0: type
         # byte 1: length
-        BBValueIgnore("cc"),
+        BBValueIgnore(2),
         # 2 bytes (09) value Solar max Current per day in mA
         BBValue("H", "max_solar_current_day_A", cnv_mA_to_A),
         # 2 bytes (10) value Solar max Watt per day in 1W
@@ -208,15 +257,18 @@ class BCSolarChargerEBLFrame(BBFrame):
         # 2 bytes (20) value solar energy in Wh
         BBValue("H", "solar_energy_Wh"),
         # 1 byte (21) status solar charger (*) bit 7 indicates sleep
-        BBValue("c", "solar_charger_status"),
+        BBValue("B", "solar_charger_status"),
     ]
+)
 
-
-class BCSolarChargerStandardFrame(BBFrame):
-    FIELDS = BCSolarChargerEBLFrame.FIELDS + [
+BCSolarChargerStandardFrame = BBFrame(
+    output_id="live/solar_charger",
+    fields=BCSolarChargerEBLFrame.fields
+    + [
         # 2 bytes (22) value solar PV module voltage in 10 mV (*)
         BBValue("H", "solar_module_voltage_V", cnv_10mV_to_V),
     ]
+)
 
 
 class RelayStatus(Flags):
@@ -230,8 +282,10 @@ class RelayStatus(Flags):
     reserved = ()
 
 
-class BCSolarChargerExtendedFrame(BBFrame):
-    FIELDS = BCSolarChargerStandardFrame.FIELDS + [
+BCSolarChargerExtendedFrame = BBFrame(
+    output_id="live/solar_charger_ext",
+    fields=BCSolarChargerStandardFrame.fields
+    + [
         # 1 byte  Relais Status (BB-X >= V407)
         #  bit 0: 0:off / 1:on
         #  bit 1: 1:SOC
@@ -241,19 +295,20 @@ class BCSolarChargerExtendedFrame(BBFrame):
         #  bit 5: 1:Solar Current
         #  bit 6: 1:Time
         #  bit 7: reserved
-        BBValue("c", "relay_status", RelayStatus),
+        BBValue("B", "relay_status", RelayStatus),
     ]
+)
 
-
-class BCBatteryComputer1Frame(BBFrame):
-    FIELDS = [
+BCBatteryComputer1Frame = BBFrame(
+    output_id="live/battery_comp_1",
+    fields=[
         # byte 0: type
         # byte 1: length
-        BBValueIgnore("cc"),
+        BBValueIgnore(2),
         # 2 bytes (01) value Battery Charge in 10mAh (*)
-        BBValue("H", "battery_charge_A", cnv_10mA_to_A),
+        BBValue("H", "battery_charge_Ah", cnv_10mA_to_A),
         # 2 bytes (02) value SOC in 0.1% steps
-        BBValue("H", "state_of_charge_percent", lambda x: x*10),
+        BBValue("H", "state_of_charge_percent", lambda x: x * 10),
         # 2 bytes (03) value Battery max Current per day in 10mA (*)
         BBValue("H", "max_battery_current_day_A", cnv_10mA_to_A),
         # 2 bytes (04) value Battery min Current per day in 10mA (*)
@@ -261,19 +316,20 @@ class BCBatteryComputer1Frame(BBFrame):
         # 2 bytes (05) value Battery max Charge per day in 10mAh
         BBValue("H", "max_battery_charge_day_A", cnv_10mA_to_A),
         # 2 bytes (06) value Battery min Charge per day in 10mAh
-        BBValue("min_battery_charge_day_A", cnv_10mA_to_A),
+        BBValue("H", "min_battery_charge_day_A", cnv_10mA_to_A),
         # 2 bytes (07) value Battery max Voltage per day in 10mV
         BBValue("H", "max_battery_voltage_day_V", cnv_10mV_to_V),
         # 2 bytes (08) value Battery min Volatge per day in 10mV
         BBValue("H", "min_battery_voltage_day", cnv_10mV_to_V),
     ]
+)
 
-
-class BCBatteryComputer2Frame(BBFrame):
-    FIELDS = [
+BCBatteryComputer2Frame = BBFrame(
+    output_id="live/battery_comp_2",
+    fields=[
         # byte 0: type
         # byte 1: length
-        BBValueIgnore("cc"),
+        BBValueIgnore(2),
         # 2 bytes (11) value Temperature in °C binary offset
         BBValue("H", "temperature_deg_C", cnv_bb_temp_to_deg_c),
         # 2 bytes (12) value min Temperature per day in °C binary offset
@@ -281,62 +337,70 @@ class BCBatteryComputer2Frame(BBFrame):
         # 2 bytes (13) value max Temperature per day in °C binary offset
         BBValue("H", "max_temperature_deg_C", cnv_bb_temp_to_deg_c),
         # 3 bytes (14) value summed total charge per day in 32/225 mAh (*)
-        BBValue("¾", "total_charge_day_Ah", lambda x: x/(32/225)),
+        BBValue("¾", "total_charge_day_Ah", lambda x: x / (32 / 225)),
         # 3 bytes (15) value summed total discharge per day in 32/225 mAh (*)
-        BBValue("¾", "total_discharge_day_Ah", lambda x: x/(32/225)),
+        BBValue("¾", "total_discharge_day_Ah", lambda x: x / (32 / 225)),
         # 3 bytes (16) value summed total external charge per in 32/225 mAh (*)
-        BBValue("¾", "total_external_charge_day_Ah", lambda x: x/(32/225)),
+        BBValue("¾", "total_external_charge_day_Ah", lambda x: x / (32 / 225)),
     ]
+)
 
-
-class BCIntradayLogEntryFrame(BBFrame):
-    FIELDS = [
+BCIntradayLogEntryFrame = BBFrame(
+    output_id="live/intraday_log",
+    fields=[
         # byte 0: type
         # byte 1: length
-        BBValueIgnore("cc"),
+        BBValueIgnore(2),
         # byte 2: record #
-        BBValue("c", "record_number"),
+        BBValue("B", "record_number"),
     ]
+)
 
-
-class BCNoBoosterDataFrame(BBFrame):
-    FIELDS = [
+BCNoBoosterDataFrame = BBFrame(
+    output_id="live/no_booster",
+    fields=[
         # byte 0: type
         # byte 1: length
-        BBValueIgnore("cc"),
+        BBValueIgnore(2),
         # 2 bytes value output voltage in 10 mV (Board Battery)**
         BBValue("H", "battery_voltage_V", cnv_10mV_to_V),
         # 2 bytes value input voltage in 10 mV (Starter Battery)**
         BBValue("H", "starter_battery_voltage_V", cnv_10mV_to_V),
     ]
+)
 
-
-class BCBoosterDataFrame(BBFrame):
-    FIELDS = BCNoBoosterDataFrame.FIELDS + [
+BCBoosterDataFrame = BBFrame(
+    output_id="live/booster",
+    fields=BCNoBoosterDataFrame.fields
+    + [
         # 2 bytes signed value charge current in 100 mA (Booster current)
         BBValue("H", "booster_charge_current_A", cnv_100mA_to_A),
         # 1 byte status booster
-        BBValue("c", "booster_status"),
+        BBValue("B", "booster_status"),
         # 3 bytes value summed total booster charge per day in 256/18000 Ah
-        BBValue("¾", "total_booster_charge_day_Ah", lambda x: x/(256/18000)),
+        BBValue("¾", "total_booster_charge_day_Ah", lambda x: x / (256 / 18000)),
     ]
+)
 
-
-class BC(BBCommand):
-    GATT_CHARACTERISTIC = "4B616912-40bd-428b-bf06-698e5e422cd9"
-    READ = FrameTypeSwitch(
-        "cc",
+BC = BBCommand(
+    GATT_CHARACTERISTIC="4b616912-40bd-428b-bf06-698e5e422cd9",
+    READ=FrameTypeSwitch(
+        "BB",
         {
             # byte 0: type
             # byte 1: length
-            (0x00, 7): BCLiveMeasurementsFrame,
-            (0x01, 9): BCSolarChargerEBLFrame,
-            (0x01, 11): BCSolarChargerStandardFrame,
-            (0x01, 12): BCSolarChargerExtendedFrame,
-            (0x02, 16): BCBatteryComputer1Frame,
-            (0x03, 15): BCBatteryComputer2Frame,
-            (0x04, 1): BCIntradayLogEntryFrame,
-            (0x05, 10): BCBoosterDataFrame,
-            (0x05, 4): BCNoBoosterDataFrame,
+            (0x00, 0x07): BCLiveMeasurementsFrame,
+            (0x01, 0x09): BCSolarChargerEBLFrame,
+            (0x01, 0x0B): BCSolarChargerStandardFrame,
+            (0x01, 0x0C): BCSolarChargerExtendedFrame,
+            (0x02, 0x10): BCBatteryComputer1Frame,
+            (0x03, 0x0F): BCBatteryComputer2Frame,
+            (0x04, 0x01): BCIntradayLogEntryFrame,
+            (0x05, 0x0A): BCBoosterDataFrame,
+            (0x05, 0x04): BCNoBoosterDataFrame,
         },
-    )
+    ),
+)
+
+
+SUBSCRIBE_CHARACTERISTICS = (BC,)
