@@ -7,8 +7,8 @@ import logging
 BYTE_ORDER = ">"  # > big-endian, < little-endian
 
 
-
 log = logging.getLogger("Commands")
+
 
 @dataclass
 class BBValue:
@@ -20,7 +20,12 @@ class BBValue:
 
     def value(self, raw_value):
         if self.struct == "¾":
-            raw_value = struct.unpack(">I", b"\0" + raw_value)[0]
+            raw_value_unsigned = struct.unpack(">I", b"\x00" + raw_value)[0]
+            raw_value = (
+                raw_value_unsigned
+                if not (raw_value_unsigned & 0x800000)
+                else raw_value_unsigned - 0x1000000
+            )
         if not self.conversion_fn:
             return raw_value
         else:
@@ -30,6 +35,7 @@ class BBValue:
         if not self.struct == "¾":
             return self.struct
         return "3s"
+
 
 class BBValueIgnore(BBValue):
     def __init__(self, byte_count=1):
@@ -78,6 +84,7 @@ def cnv_bb_temp_to_deg_c(bb_temp):
 def cnv_solar_status(status):
     return {0: "active", 1: "standby", 2: "reduced"}.get(status, "unknown")
 
+
 @dataclass
 class BBFrame:
     output_id: str
@@ -87,13 +94,18 @@ class BBFrame:
         return BYTE_ORDER + "".join(field.get_struct() for field in self.fields)
 
     def process(self, value):
-        non_ignore_fields = filter(lambda field: type(field) is not BBValueIgnore, self.fields)
-        return (self.output_id, {
-            field.output_id: field.value(raw_value)
-            for field, raw_value in zip(
-                non_ignore_fields, struct.unpack_from(self.format(), value)
-            )
-        })
+        non_ignore_fields = filter(
+            lambda field: type(field) is not BBValueIgnore, self.fields
+        )
+        return (
+            self.output_id,
+            {
+                field.output_id: field.value(raw_value)
+                for field, raw_value in zip(
+                    non_ignore_fields, struct.unpack_from(self.format(), value)
+                )
+            },
+        )
 
 
 @dataclass
@@ -106,7 +118,7 @@ class FrameTypeSwitch:
         if not index_value in self.frame_types:
             raise Exception(f"Frame type not found: {index_value!r}")
         log.debug(f"Selected index: {index_value}.")
-        
+
         return self.frame_types[index_value].process(value)
 
 
@@ -177,7 +189,7 @@ LogEntryDaysFrame = BBFrame(
         BBValueIgnore(),
         # bytes 37-38: big endian 16-bit total booster charge per day 100 mAh (V304)**
         BBValue("H", "total_booster_charge_day_Ah", cnv_100mA_to_A),
-    ]
+    ],
 )
 
 LogEntryFrame = BBFrame(
@@ -205,7 +217,7 @@ LogEntryFrame = BBFrame(
         BBValueIgnore(2),
         # byte 36: 8-bit frame type 0x01
         BBValueIgnore(),
-    ]
+    ],
 )
 
 
@@ -239,7 +251,7 @@ BCLiveMeasurementsFrame = BBFrame(
         BBValue("H", "solar_charge_current_A", cnv_10mA_to_A),
         # 3 bytes (00) value Battery Current in mA
         BBValue("¾", "battery_current_A", cnv_mA_to_A),
-    ]
+    ],
 )
 
 BCSolarChargerEBLFrame = BBFrame(
@@ -258,7 +270,7 @@ BCSolarChargerEBLFrame = BBFrame(
         BBValue("H", "solar_energy_Wh"),
         # 1 byte (21) status solar charger (*) bit 7 indicates sleep
         BBValue("B", "solar_charger_status"),
-    ]
+    ],
 )
 
 BCSolarChargerStandardFrame = BBFrame(
@@ -267,7 +279,7 @@ BCSolarChargerStandardFrame = BBFrame(
     + [
         # 2 bytes (22) value solar PV module voltage in 10 mV (*)
         BBValue("H", "solar_module_voltage_V", cnv_10mV_to_V),
-    ]
+    ],
 )
 
 
@@ -296,7 +308,7 @@ BCSolarChargerExtendedFrame = BBFrame(
         #  bit 6: 1:Time
         #  bit 7: reserved
         BBValue("B", "relay_status", RelayStatus),
-    ]
+    ],
 )
 
 BCBatteryComputer1Frame = BBFrame(
@@ -308,7 +320,7 @@ BCBatteryComputer1Frame = BBFrame(
         # 2 bytes (01) value Battery Charge in 10mAh (*)
         BBValue("H", "battery_charge_Ah", cnv_10mA_to_A),
         # 2 bytes (02) value SOC in 0.1% steps
-        BBValue("H", "state_of_charge_percent", lambda x: x * 10),
+        BBValue("H", "state_of_charge_percent", lambda x: x / 10),
         # 2 bytes (03) value Battery max Current per day in 10mA (*)
         BBValue("H", "max_battery_current_day_A", cnv_10mA_to_A),
         # 2 bytes (04) value Battery min Current per day in 10mA (*)
@@ -321,7 +333,7 @@ BCBatteryComputer1Frame = BBFrame(
         BBValue("H", "max_battery_voltage_day_V", cnv_10mV_to_V),
         # 2 bytes (08) value Battery min Volatge per day in 10mV
         BBValue("H", "min_battery_voltage_day", cnv_10mV_to_V),
-    ]
+    ],
 )
 
 BCBatteryComputer2Frame = BBFrame(
@@ -337,12 +349,12 @@ BCBatteryComputer2Frame = BBFrame(
         # 2 bytes (13) value max Temperature per day in °C binary offset
         BBValue("H", "max_temperature_deg_C", cnv_bb_temp_to_deg_c),
         # 3 bytes (14) value summed total charge per day in 32/225 mAh (*)
-        BBValue("¾", "total_charge_day_Ah", lambda x: x / (32 / 225)),
+        BBValue("¾", "total_charge_day_Ah", lambda x: (x / (32 / 225))/1000),
         # 3 bytes (15) value summed total discharge per day in 32/225 mAh (*)
-        BBValue("¾", "total_discharge_day_Ah", lambda x: x / (32 / 225)),
+        BBValue("¾", "total_discharge_day_Ah", lambda x: (x / (32 / 225))/1000),
         # 3 bytes (16) value summed total external charge per in 32/225 mAh (*)
-        BBValue("¾", "total_external_charge_day_Ah", lambda x: x / (32 / 225)),
-    ]
+        BBValue("¾", "total_external_charge_day_Ah", lambda x: (x / (32 / 225))/1000),
+    ],
 )
 
 BCIntradayLogEntryFrame = BBFrame(
@@ -353,7 +365,7 @@ BCIntradayLogEntryFrame = BBFrame(
         BBValueIgnore(2),
         # byte 2: record #
         BBValue("B", "record_number"),
-    ]
+    ],
 )
 
 BCNoBoosterDataFrame = BBFrame(
@@ -366,7 +378,7 @@ BCNoBoosterDataFrame = BBFrame(
         BBValue("H", "battery_voltage_V", cnv_10mV_to_V),
         # 2 bytes value input voltage in 10 mV (Starter Battery)**
         BBValue("H", "starter_battery_voltage_V", cnv_10mV_to_V),
-    ]
+    ],
 )
 
 BCBoosterDataFrame = BBFrame(
@@ -379,7 +391,7 @@ BCBoosterDataFrame = BBFrame(
         BBValue("B", "booster_status"),
         # 3 bytes value summed total booster charge per day in 256/18000 Ah
         BBValue("¾", "total_booster_charge_day_Ah", lambda x: x / (256 / 18000)),
-    ]
+    ],
 )
 
 BC = BBCommand(
