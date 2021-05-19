@@ -17,11 +17,6 @@ Features:
 pip3 install git+https://github.com/danielfett/bluebattery.py.git
 ```
 
-If you want to use the MQTT features, also run
-
-```
-pip3 install paho-mqtt
-```
 
 ## Reading values from the command line
 
@@ -29,7 +24,29 @@ pip3 install paho-mqtt
 $ bb_cli AA:BB:CC:DD:EE:FF
 ```
 
+For an updating live view, first run
+
+```
+$ pip3 install rich
+```
+
+and then
+
+```
+$ bb_live AA:BB:CC:DD:EE:FF
+```
+
+![live view interface](assets/live_interface.png?raw=true)
+
 ## Publishing values to an MQTT server
+
+If you want to use the MQTT features, first run
+
+```
+pip3 install paho-mqtt
+```
+
+The start the MQTT publisher using
 
 ```
 $ bb_mqtt AA:BB:CC:DD:EE:FF --host my-mqtt.server.example

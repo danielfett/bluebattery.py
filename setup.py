@@ -26,6 +26,7 @@ setuptools.setup(
         "console_scripts": [
             "bb_cli=bluebattery.cli:cli",
             "bb_mqtt=bluebattery.cli:mqtt",
+            "bb_live=bluebattery.cli:live",
         ],
     },
 )

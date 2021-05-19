@@ -110,3 +110,45 @@ def mqtt():
             mqtt_client.publish(mktopic(measurement + "/" + key), str(value))
 
     run(args, recv_callback)
+
+
+def live():
+    from rich.columns import Columns
+    from rich.panel import Panel
+    from rich.live import Live
+    from rich.table import Table
+    from rich import box
+
+    parser = default_parser()
+
+    args = parser.parse_args()
+    log_level = logging.ERROR
+    logging.basicConfig(level=log_level)
+    logging.getLogger().info(f"Log level set to to {log_level}.")
+
+    topic_panels = {}
+
+    columns = Columns()
+
+    def recv_callback(measurement, values):
+        content = Table(show_header=False, box=box.MINIMAL)
+        content.add_column("Name", justify="right", no_wrap=True)
+        content.add_column("Value", no_wrap=True)
+        for key, value in values.items():
+            if isinstance(value, float):
+                value = f"{value:5.1f}"
+            elif isinstance(value, int):
+                value = f"{value:5.0f}"
+            else:
+                value = str(value)
+            content.add_row(key, value)
+
+        if measurement in topic_panels:
+            topic_panels[measurement].renderable = content
+        else:
+            panel = Panel(content, title=measurement)
+            topic_panels[measurement] = panel
+            columns.add_renderable(panel)
+
+    with Live(columns, refresh_per_second=4):
+        run(args, recv_callback)
