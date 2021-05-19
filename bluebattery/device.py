@@ -1,12 +1,10 @@
 import logging
 
 import gatt
-from gi.repository import GObject
 
-from .commands import SUBSCRIBE_CHARACTERISTICS
+from .protocol import SUBSCRIBE_CHARACTERISTICS
 
-
-#class BBDeviceManager(gatt.DeviceManager):
+# class BBDeviceManager(gatt.DeviceManager):
 #    def __init__(self, mac_address, *args, **kwargs):
 #        self.log = logging.getLogger("Device Manager")
 #        self.log.info("Started")
@@ -20,9 +18,10 @@ from .commands import SUBSCRIBE_CHARACTERISTICS
 #
 #        self.log.info(f"Found target device: {mac_address} - activating")
 #        return BBDevice(mac_address=mac_address, manager=self)
-#    
+#
 #    def device_discovered(self, device):
 #        self.log.info("Device discovered!")
+
 
 class BBDevice(gatt.Device):
     def __init__(self, recv_callback, *args, **kwargs):
@@ -59,5 +58,7 @@ class BBDevice(gatt.Device):
     def characteristic_value_updated(self, characteristic, value):
         for command in SUBSCRIBE_CHARACTERISTICS:
             if command.GATT_CHARACTERISTIC == characteristic.uuid:
-                self.log.debug(f"Received value for {command.GATT_CHARACTERISTIC} ({len(value)} bytes)")
+                self.log.debug(
+                    f"Received value for {command.GATT_CHARACTERISTIC} ({len(value)} bytes)"
+                )
                 self.recv_callback(*command.process(value))

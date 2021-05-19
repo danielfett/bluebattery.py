@@ -1,0 +1,33 @@
+
+def cnv_mV_to_V(mV):
+    return mV / 1000
+
+
+cnv_mW_to_W = cnv_mV_to_V
+
+
+def cnv_10mV_to_V(_10mV):
+    return _10mV / 100
+
+
+cnv_10mA_to_A = cnv_10mV_to_V
+
+
+def cnv_mA_to_A(mA):
+    return mA / 1000
+
+
+def cnv_100mA_to_A(_100mA):
+    return _100mA / 10
+
+
+def cnv_neg_100mA_to_A(_100mA):
+    return -_100mA / 10
+
+
+def cnv_bb_temp_to_deg_c(bb_temp):
+    return (bb_temp - 0x8000) / 100
+
+
+def cnv_solar_status(status):
+    return {0: "active", 1: "standby", 2: "reduced"}.get(status, "unknown")
