@@ -14,6 +14,8 @@ Features:
 ## Installation
 
 ```
+sudo apt-get install python3-pip
+# log out and in again to apply new environment variables 
 pip3 install git+https://github.com/danielfett/bluebattery.py.git
 ```
 
