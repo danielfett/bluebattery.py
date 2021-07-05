@@ -21,6 +21,7 @@ setuptools.setup(
     python_requires=">=3.6",
     install_requires=[
         "gatt",
+        "py-flags",
     ],
     entry_points={
         "console_scripts": [
