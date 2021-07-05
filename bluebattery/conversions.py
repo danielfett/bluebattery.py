@@ -1,4 +1,3 @@
-
 def cnv_mV_to_V(mV):
     return mV / 1000
 
@@ -19,6 +18,9 @@ def cnv_mA_to_A(mA):
 
 def cnv_100mA_to_A(_100mA):
     return _100mA / 10
+
+
+cnv_100mV_to_V = cnv_100mA_to_A
 
 
 def cnv_neg_100mA_to_A(_100mA):

@@ -63,11 +63,6 @@ class BBValueIgnore(BBValue):
 
 
 @dataclass
-class CommandSwitch:
-    commands: Dict[int, List[BBValue]]
-
-
-@dataclass
 class BBFrame:
     output_id: str
     fields: List[BBValue]
@@ -102,13 +97,3 @@ class BBFrameTypeSwitch:
         log.debug(f"Selected index: {index_value}.")
 
         return self.frame_types[index_value].process(value)
-
-
-@dataclass
-class BBCommand:
-    GATT_CHARACTERISTIC: str
-    READ: Optional[Union[BBFrame, BBFrameTypeSwitch]] = None
-    WRITE: Optional[BBFrame] = None
-
-    def process(self, value):
-        return self.READ.process(value)

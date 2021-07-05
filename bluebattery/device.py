@@ -2,7 +2,7 @@ import logging
 
 import gatt
 
-from .protocol import SUBSCRIBE_CHARACTERISTICS
+from .characteristics import ALL_CHARACTERISTICS
 
 # class BBDeviceManager(gatt.DeviceManager):
 #    def __init__(self, mac_address, *args, **kwargs):
@@ -24,10 +24,18 @@ from .protocol import SUBSCRIBE_CHARACTERISTICS
 
 
 class BBDevice(gatt.Device):
-    def __init__(self, recv_callback, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.log = logging.getLogger(f"Device {self.mac_address}")
-        self.recv_callback = recv_callback
+        self.callbacks = {}
+        self.characteristics = {}
+        self.characteristics_by_uuid = {}
+
+    def on_message(self, callback):
+        self.callbacks["message"] = callback
+
+    def on_ready(self, callback):
+        self.callbacks["ready"] = callback
 
     def connect_succeeded(self):
         super().connect_succeeded()
@@ -48,17 +56,30 @@ class BBDevice(gatt.Device):
 
         for service in self.services:
             for characteristic in service.characteristics:
-                for command in SUBSCRIBE_CHARACTERISTICS:
-                    if command.GATT_CHARACTERISTIC == characteristic.uuid:
-                        self.log.debug(f"Subscribing to {command.GATT_CHARACTERISTIC}")
-                        characteristic.enable_notifications()
-                    else:
-                        self.log.debug(f"Not subscribing to {characteristic.uuid}.")
+                for BBCharacteristicType in ALL_CHARACTERISTICS:
+                    if (
+                        BBCharacteristicType.GATT_CHARACTERISTIC_UUID
+                        == characteristic.uuid
+                    ):
+                        # Instantiate a characteristic, passing the GATT object
+                        new_characteristic = BBCharacteristicType(characteristic)
+                        self.characteristics[BBCharacteristicType] = new_characteristic
+                        self.characteristics_by_uuid[
+                            characteristic.uuid
+                        ] = new_characteristic
+                        break
+                else:
+                    self.log.debug(
+                        f"No matching characteristic found for {characteristic.uuid}."
+                    )
+
+        if self.callbacks.get("ready", None):
+            self.callbacks["ready"](self)
 
     def characteristic_value_updated(self, characteristic, value):
-        for command in SUBSCRIBE_CHARACTERISTICS:
-            if command.GATT_CHARACTERISTIC == characteristic.uuid:
-                self.log.debug(
-                    f"Received value for {command.GATT_CHARACTERISTIC} ({len(value)} bytes)"
-                )
-                self.recv_callback(*command.process(value))
+        bbcharacteristic = self.characteristics_by_uuid[characteristic.uuid]
+        self.log.debug(f"Received value for {characteristic.uuid} ({len(value)} bytes)")
+        if self.callbacks.get("message", None):
+            self.callbacks["message"](
+                type(bbcharacteristic), *bbcharacteristic.process(value)
+            )

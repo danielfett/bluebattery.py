@@ -25,8 +25,8 @@ def run(args, recv_callback):
     device = BBDevice(
         mac_address=args.mac_address.lower(),
         manager=manager,
-        recv_callback=recv_callback,
     )
+    device.on_message(recv_callback)
 
     def handler_stop_signals(signum, frame):
         try:
@@ -60,7 +60,7 @@ def cli():
     logging.basicConfig(level=log_level)
     logging.getLogger().info(f"Log level set to to {log_level}.")
 
-    def recv_callback(measurement, values):
+    def recv_callback(_, measurement, values):
         print(f"Received {measurement}:")
         for key, value in values.items():
             print(f"  {key:>30} | {value}")
@@ -105,7 +105,7 @@ def mqtt():
     mqtt_client.connect_async(args.host, int(args.port))
     mqtt_client.loop_start()
 
-    def recv_callback(measurement, values):
+    def recv_callback(_, measurement, values):
         for key, value in values.items():
             mqtt_client.publish(mktopic(measurement + "/" + key), str(value))
 
@@ -130,7 +130,7 @@ def live():
 
     columns = Columns()
 
-    def recv_callback(measurement, values):
+    def recv_callback(_, measurement, values):
         content = Table(show_header=False, box=box.MINIMAL)
         content.add_column("Name", justify="right", no_wrap=True)
         content.add_column("Value", no_wrap=True)
