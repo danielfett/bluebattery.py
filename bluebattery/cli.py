@@ -1,9 +1,7 @@
-from bluebattery.device import BBDevice
-import gatt
+from bluebattery.device import BBDeviceManager
 import argparse
 import logging
 import signal
-import sys
 
 
 def default_parser():
@@ -21,16 +19,11 @@ def default_parser():
 
 
 def run(args, recv_callback):
-    manager = gatt.DeviceManager(adapter_name=args.device)
-    device = BBDevice(
-        mac_address=args.mac_address.lower(),
-        manager=manager,
-    )
-    device.on_message(recv_callback)
+    manager = BBDeviceManager(target_mac_address=args.mac_address, adapter_name=args.device)
+    manager.target_device.on_message(recv_callback)
 
     def handler_stop_signals(signum, frame):
         try:
-            device.disconnect()
             manager.stop()
         except Exception as e:
             print(e)
@@ -38,7 +31,6 @@ def run(args, recv_callback):
     signal.signal(signal.SIGINT, handler_stop_signals)
     signal.signal(signal.SIGTERM, handler_stop_signals)
 
-    device.connect()
     manager.run()
 
 
