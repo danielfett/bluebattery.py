@@ -1,4 +1,5 @@
 from typing import Optional, Union
+import logging
 
 from . import frametypes
 from .commands import BBFrame, BBFrameTypeSwitch
@@ -14,11 +15,10 @@ class BBCharacteristic:
 
     def __init__(self, characteristic):
         self.characteristic = characteristic
+        self.log = logging.getLogger(f"Characteristic {self.GATT_CHARACTERISTIC_UUID}")
         if self.READ:
-            self.log.debug(f"Subscribing to {self.GATT_CHARACTERISTIC_UUID}")
+            self.log.debug("Subscribing.")
             characteristic.enable_notifications()
-        else:
-            self.log.debug(f"Not subscribing to {characteristic.uuid}.")
 
     def process(self, value):
         retval = self.READ.process(value)
@@ -40,7 +40,7 @@ class BCSec(BBCharacteristic):
     Log entry is generated when seconds reach 86400 (24 Hours) and seconds are reset to 0.
     """
 
-    GATT_CHARACTERISTIC = "4b616901-40bd-428b-bf06-698e5e422cd9"
+    GATT_CHARACTERISTIC_UUID = "4b616901-40bd-428b-bf06-698e5e422cd9"
     READ = frametypes.SecFrame
     WRITE = frametypes.SecFrame
 
@@ -53,7 +53,7 @@ class BCLog(BBCharacteristic):
     Note: Reading "sec" characteristics resets read pointer to earliest available log entry.
     """
 
-    GATT_CHARACTERISTIC = "4b616907-40bd-428b-bf06-698e5e422cd9"
+    GATT_CHARACTERISTIC_UUID = "4b616907-40bd-428b-bf06-698e5e422cd9"
     READ = BBFrameTypeSwitch(
         "36xc",  # 36th byte is the frame type indicator
         {
@@ -65,7 +65,7 @@ class BCLog(BBCharacteristic):
 
 
 class BCLive(BBCharacteristic):
-    GATT_CHARACTERISTIC = "4b616912-40bd-428b-bf06-698e5e422cd9"
+    GATT_CHARACTERISTIC_UUID = "4b616912-40bd-428b-bf06-698e5e422cd9"
     READ = BBFrameTypeSwitch(
         "BB",  # first two bytes indicate frame type
         {

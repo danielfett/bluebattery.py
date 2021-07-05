@@ -32,7 +32,6 @@ def run(args, recv_callback):
         try:
             device.disconnect()
             manager.stop()
-            sys.exit(0)
         except Exception as e:
             print(e)
 
