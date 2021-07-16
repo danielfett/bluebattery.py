@@ -20,7 +20,9 @@ def default_parser():
 
 
 def run(args, recv_callback):
-    manager = BBDeviceManager(target_mac_address=args.mac_address, adapter_name=args.device)
+    manager = BBDeviceManager(
+        target_mac_address=args.mac_address, adapter_name=args.device
+    )
     manager.target_device.on_message(recv_callback)
 
     def handler_stop_signals(signum, frame):
@@ -114,7 +116,7 @@ def mqtt():
     mqtt_client.loop_start()
 
     def recv_callback_collect(_, measurement, values):
-        mqtt_client.publish(mktopic(measurement), json.dumps(dict(values)))
+        mqtt_client.publish(mktopic(measurement), json.dumps(dict(values), default=str))
 
     def recv_callback_single(_, measurement, values):
         for key, value in values.items():
