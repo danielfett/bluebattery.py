@@ -2,6 +2,7 @@ from bluebattery.device import BBDeviceManager
 import argparse
 import logging
 import signal
+import json
 
 
 def default_parser():
@@ -80,6 +81,9 @@ def mqtt():
         help="Prefix for topics sent from this script.",
         default="service/bluebattery",
     )
+    parser.add_argument(
+        "--collect", "-c", help="Collect measurements into JSON objects."
+    )
 
     args = parser.parse_args()
 
@@ -96,11 +100,16 @@ def mqtt():
     mqtt_client.connect_async(args.host, int(args.port))
     mqtt_client.loop_start()
 
-    def recv_callback(_, measurement, values):
+    def recv_callback_collect(_, measurement, values):
+        mqtt_client.publish(mktopic(measurement), json.dumps(dict(values)))
+
+    def recv_callback_single(_, measurement, values):
         for key, value in values.items():
             mqtt_client.publish(mktopic(measurement + "/" + key), str(value))
 
-    run(args, recv_callback)
+    cb = recv_callback_collect if args.collect else recv_callback_single
+
+    run(args, cb)
 
 
 def live():
