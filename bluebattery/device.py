@@ -12,6 +12,7 @@ class BBDeviceManager(gatt.DeviceManager):
         super().__init__(**kwargs)
         self.log = logging.getLogger("Device Manager")
         if target_mac_address:
+            self.log.debug(f"Creating target device with mac address {target_mac_address.lower()}")
             self.target_device = BBDevice(
                 mac_address=target_mac_address.lower(),
                 manager=self,
@@ -19,6 +20,7 @@ class BBDeviceManager(gatt.DeviceManager):
 
     def stop(self):
         if self.target_device:
+            self.log.debug("Trying to disconnect target device.")
             try:
                 self.target_device.disconnect()
             except Exception as e:
@@ -27,6 +29,7 @@ class BBDeviceManager(gatt.DeviceManager):
 
     def run(self):
         if self.target_device:
+            self.log.debug("Trying to connect target device.")
             self.target_device.connect()
         super().run()
 
@@ -54,15 +57,20 @@ class BBDevice(gatt.Device):
     def connect_failed(self, error):
         super().connect_failed(error)
         self.log.info("Connection failed")
+        if self.auto_reconnect:
+            self.log.debug("Trying to reconnect")
+            self.connect()
 
     def disconnect(self):
         self.auto_reconnect = False
+        self.log.debug("Disconnect request received, auto_reconnect set to False")
         super().disconnect()
 
     def disconnect_succeeded(self):
         super().disconnect_succeeded()
         self.log.info("Disconnected")
         if self.auto_reconnect:
+            self.log.debug("Trying to reconnect")
             self.connect()
 
     def services_resolved(self):

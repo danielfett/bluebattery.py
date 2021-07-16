@@ -80,19 +80,32 @@ def mqtt():
         help="Prefix for topics sent from this script.",
         default="service/bluebattery",
     )
+    parser.add_argument("-v", help="Enable verbose logging.", action="store_true")
+    parser.add_argument("-vv", help="Enable debug logging.", action="store_true")
 
     args = parser.parse_args()
 
     def mktopic(postfix):
         return args.prefix + "/" + postfix
 
-    logging.basicConfig(level=logging.INFO)
+    def on_connect(client, *args, **kwargs):
+        client.publish(mktopic("online"), "1", retain=True)
+
+    if args.v:
+        log_level = logging.INFO
+    elif args.vv:
+        log_level = logging.DEBUG
+    else:
+        log_level = logging.ERROR
+    logging.basicConfig(level=log_level)
+    logging.getLogger().info(f"Log level set to to {log_level}.")
 
     log = logging.getLogger()
 
     mqtt_client = mqtt.Client()
     mqtt_client.enable_logger(log)
     mqtt_client.will_set(mktopic("online"), "0", retain=True)
+    mqtt_client.on_connect = on_connect
     mqtt_client.connect_async(args.host, int(args.port))
     mqtt_client.loop_start()
 
