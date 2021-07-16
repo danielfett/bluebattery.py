@@ -24,8 +24,10 @@ pip3 install git+https://github.com/danielfett/bluebattery.py.git
 ## Reading values from the command line
 
 ```
-$ bb_cli AA:BB:CC:DD:EE:FF
+$ bb_cli 
 ```
+
+(If you run into troubles connecting to the device, or if there are multiple BB devices nearby, provide the MAC address of the device. It can be found in the BB app. E.g.: `$ bb_cli AA:BB:CC:DD:EE:FF`)
 
 For an updating live view, first run
 
@@ -36,7 +38,7 @@ $ pip3 install rich
 and then
 
 ```
-$ bb_live AA:BB:CC:DD:EE:FF
+$ bb_live 
 ```
 
 ![live view interface](assets/live_interface.png?raw=true)
@@ -52,8 +54,10 @@ pip3 install paho-mqtt
 The start the MQTT publisher using
 
 ```
-$ bb_mqtt AA:BB:CC:DD:EE:FF --host my-mqtt.server.example
+$ bb_mqtt --host my-mqtt.server.example
 ```
+
+Use `--collect` to get a more concise MQTT output using JSON objects.
 
 ## Troubleshooting
 
