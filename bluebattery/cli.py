@@ -84,7 +84,10 @@ def mqtt():
         default="service/bluebattery",
     )
     parser.add_argument(
-        "--collect", "-c", help="Collect measurements into JSON objects."
+        "--collect",
+        "-c",
+        help="Collect measurements into JSON objects.",
+        action="store_true",
     )
     parser.add_argument("-v", help="Enable verbose logging.", action="store_true")
     parser.add_argument("-vv", help="Enable debug logging.", action="store_true")
