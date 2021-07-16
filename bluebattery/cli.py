@@ -9,7 +9,10 @@ def default_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "mac_address",
-        help="Mac address of the BlueBattery device, format 'AA:BB:CC:DD:EE:FF'.",
+        help="Mac address of the BlueBattery device, format 'AA:BB:CC:DD:EE:FF'."
+        "If no address is given, any suitable Bluebattery device will be used.",
+        nargs="?",
+        default=None,
     )
     parser.add_argument(
         "--device",
@@ -21,9 +24,10 @@ def default_parser():
 
 def run(args, recv_callback):
     manager = BBDeviceManager(
-        target_mac_address=args.mac_address, adapter_name=args.device
+        on_message=recv_callback,
+        target_mac_address=args.mac_address,
+        adapter_name=args.device,
     )
-    manager.target_device.on_message(recv_callback)
 
     def handler_stop_signals(signum, frame):
         try:

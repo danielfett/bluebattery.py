@@ -6,14 +6,19 @@ from .characteristics import ALL_CHARACTERISTICS
 
 
 class BBDeviceManager(gatt.DeviceManager):
+    ADVERTISED_SERVICE_ID = "AA021474-780D-439F-AF20-6B46446A610E"
     target_device = None
 
-    def __init__(self, target_mac_address=None, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, target_mac_address=None, on_message=None, **kwargs):
+        self.on_message = on_message
         self.log = logging.getLogger("Device Manager")
+        super().__init__(**kwargs)
         if target_mac_address:
-            self.log.debug(f"Creating target device with mac address {target_mac_address.lower()}")
+            self.log.debug(
+                f"Creating target device with mac address {target_mac_address.lower()}"
+            )
             self.target_device = BBDevice(
+                on_message=self.on_message,
                 mac_address=target_mac_address.lower(),
                 manager=self,
             )
@@ -25,24 +30,41 @@ class BBDeviceManager(gatt.DeviceManager):
                 self.target_device.disconnect()
             except Exception as e:
                 print(e)
+        self.stop_discovery()
         super().stop()
+
+    def device_discovered(self, device):
+        self.log.debug(f"Discovery found device: {device.mac_address}.")
+        device.advertised()
+        self.stop_discovery()
+        device.connect()
+
+    def make_device(self, mac_address):
+        return BBDevice(
+            on_message=self.on_message, mac_address=mac_address, manager=self
+        )
 
     def run(self):
         if self.target_device:
             self.log.debug("Trying to connect target device.")
             self.target_device.connect()
+        else:
+            self.log.debug("No target device given, starting discovery.")
+            self.start_discovery([self.ADVERTISED_SERVICE_ID])
         super().run()
 
 
 class BBDevice(gatt.Device):
     auto_reconnect = True
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, on_message=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.log = logging.getLogger(f"Device {self.mac_address}")
         self.callbacks = {}
         self.characteristics = {}
         self.characteristics_by_uuid = {}
+        if on_message:
+            self.callbacks["message"] = on_message
 
     def on_message(self, callback):
         self.callbacks["message"] = callback

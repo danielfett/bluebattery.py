@@ -6,7 +6,8 @@ Features:
 
 - [x] Reading of periodically sent measurements
 - [x] Publishes value to an MQTT broker
-- [ ] Auto-discovery of BB devices
+- [x] Auto-discovery of BB devices
+- [ ] Persisting previously discovered BB device
 - [ ] Access to stored logs
 - [ ] Modification of device settings
 - [ ] Firmware update
