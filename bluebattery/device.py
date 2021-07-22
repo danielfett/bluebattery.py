@@ -9,8 +9,12 @@ class BBDeviceManager(gatt.DeviceManager):
     ADVERTISED_SERVICE_ID = "AA021474-780D-439F-AF20-6B46446A610E"
     target_device = None
 
-    def __init__(self, target_mac_address=None, on_message=None, **kwargs):
+    def __init__(
+        self, target_mac_address=None, on_message=None, on_device_ready=None, **kwargs
+    ):
         self.on_message = on_message
+        self.on_device_ready = on_device_ready
+
         self.log = logging.getLogger("Device Manager")
         super().__init__(**kwargs)
         if target_mac_address:
@@ -19,6 +23,7 @@ class BBDeviceManager(gatt.DeviceManager):
             )
             self.target_device = BBDevice(
                 on_message=self.on_message,
+                on_ready=self.on_device_ready,
                 mac_address=target_mac_address.lower(),
                 manager=self,
             )
@@ -41,7 +46,10 @@ class BBDeviceManager(gatt.DeviceManager):
 
     def make_device(self, mac_address):
         return BBDevice(
-            on_message=self.on_message, mac_address=mac_address, manager=self
+            on_message=self.on_message,
+            on_ready=self.on_device_ready,
+            mac_address=mac_address,
+            manager=self,
         )
 
     def run(self):
@@ -57,14 +65,17 @@ class BBDeviceManager(gatt.DeviceManager):
 class BBDevice(gatt.Device):
     auto_reconnect = True
 
-    def __init__(self, on_message=None, *args, **kwargs):
+    def __init__(self, on_message=None, on_ready=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.log = logging.getLogger(f"Device {self.mac_address}")
         self.callbacks = {}
         self.characteristics = {}
         self.characteristics_by_uuid = {}
+        self.characteristics_by_class = {}
         if on_message:
             self.callbacks["message"] = on_message
+        if on_ready:
+            self.callbacks["ready"] = on_ready
 
     def on_message(self, callback):
         self.callbacks["message"] = callback
@@ -113,6 +124,9 @@ class BBDevice(gatt.Device):
                         self.characteristics_by_uuid[
                             characteristic.uuid
                         ] = new_characteristic
+                        self.characteristics_by_class[
+                            BBCharacteristicType
+                        ] = new_characteristic
                         break
                 else:
                     self.log.debug(
@@ -126,6 +140,7 @@ class BBDevice(gatt.Device):
         bbcharacteristic = self.characteristics_by_uuid[characteristic.uuid]
         self.log.debug(f"Received value for {characteristic.uuid} ({len(value)} bytes)")
         if self.callbacks.get("message", None):
-            self.callbacks["message"](
-                type(bbcharacteristic), *bbcharacteristic.process(value)
-            )
+            for frametype, measurement, values in bbcharacteristic.process(value):
+                self.callbacks["message"](
+                    type(bbcharacteristic), frametype, measurement, values
+                )

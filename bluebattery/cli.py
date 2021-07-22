@@ -1,4 +1,6 @@
-from bluebattery.device import BBDeviceManager
+from bluebattery.frametypes import LogEntryDaysFrame, LogEntryFrameOld, LogEntryFrameNew
+from bluebattery.device import BBDevice, BBDeviceManager
+from bluebattery.characteristics import BCLog, BCSec
 import argparse
 import logging
 import signal
@@ -22,9 +24,10 @@ def default_parser():
     return parser
 
 
-def run(args, recv_callback):
+def run(args, recv_callback, ready_callback=None):
     manager = BBDeviceManager(
         on_message=recv_callback,
+        on_device_ready=ready_callback,
         target_mac_address=args.mac_address,
         adapter_name=args.device,
     )
@@ -58,13 +61,32 @@ def cli():
     logging.basicConfig(level=log_level)
     logging.getLogger().info(f"Log level set to to {log_level}.")
 
-    def recv_callback(_, measurement, values):
+    def recv_callback(characteristic, frametype, measurement, values):
         print(f"Received {measurement}:")
         for key, value in values.items():
             print(f"  {key:>30} | {value}")
         print()
 
-    run(args, recv_callback)
+    def read_sec_cb(device: BBDevice):
+        info = {
+            'first_day_seen': None,
+            'first_frametype_seen': None,
+        }
+        def read_log_cb(characteristic, frames):
+            if not isinstance(characteristic, BCSec):
+                for frametype, measurement, values in frames:
+                    if not info['first_frametype_seen']:
+                        info['first_frametype_seen'] = frametype
+                        info['first_day_seen'] = values['day_counter']
+                        
+                    elif frametype == info['first_frametype_seen'] and values['day_counter'] == info['first_day_seen']:
+                        print("Finished reading history values.")
+                        return
+            device.characteristics_by_class[BCLog].read(read_log_cb)
+
+        device.characteristics_by_class[BCSec].read(read_log_cb)
+
+    run(args, recv_callback, read_sec_cb)
 
 
 def mqtt():
@@ -122,10 +144,12 @@ def mqtt():
     mqtt_client.connect_async(args.host, int(args.port))
     mqtt_client.loop_start()
 
-    def recv_callback_collect(_, measurement, values):
-        mqtt_client.publish(mktopic(measurement), json.dumps(dict(values), default=str))
+    def recv_callback_collect(characteristic, frametype, measurement, values):
+        mqtt_client.publish(
+            mktopic(measurement), json.dumps(dict(values), default=str)
+        )
 
-    def recv_callback_single(_, measurement, values):
+    def recv_callback_single(characteristic, frametype, measurement, values):
         for key, value in values.items():
             mqtt_client.publish(mktopic(measurement + "/" + key), str(value))
 
@@ -152,7 +176,7 @@ def live():
 
     columns = Columns()
 
-    def recv_callback(_, measurement, values):
+    def recv_callback(characteristic, frametype, measurement, values):
         content = Table(show_header=False, box=box.MINIMAL)
         content.add_column("Name", justify="right", no_wrap=True)
         content.add_column("Value", no_wrap=True)

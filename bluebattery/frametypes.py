@@ -11,7 +11,7 @@ SecFrame = BBFrame(output_id="sec", fields=[BBValue("i", "time_of_day_s")])
 
 
 LogEntryDaysFrame = BBFrame(
-    output_id="log/entry_day",
+    output_id="log/day/{day_counter}",
     fields=[
         # bytes 0-1: big endian 16 bit mWh per day**
         BBValue("H", "Wh_day", cnv.cnv_mW_to_W),
@@ -24,9 +24,9 @@ LogEntryDaysFrame = BBFrame(
         # bytes 8-9: big endian 16-bit charge time in minutes per Day**
         BBValue("H", "charge_minutes_day"),
         # bytes 10-11: big endian 16-bit day counter for this log entry, counting up from 0
-        BBValue("H", "log_entry_day"),
+        BBValue("H", "day_counter"),
         # bytes 12-13: big endian 16-bit current day (max day count)
-        BBValue("H", "day_curent"),
+        BBValue("H", "max_day_count"),
         # bytes 14-15: big endian 16-bit Solar charge in 100 mAh**
         BBValue("H", "solar_charge_Ah", cnv.cnv_100mA_to_A),
         # bytes 16-17: big endian 16-bit SOC in 100 mAh
@@ -58,36 +58,36 @@ LogEntryDaysFrame = BBFrame(
 
 # available starting with Version V2xx, not anymore supported starting V306
 LogEntryFrameOld = BBFrame(
-    output_id="log/entry",
+    output_id="log/day/{day_counter}",
     fields=[
         # bytes 0-1: 16-bit day counter (relative to current day in frame type 0x00)
-        BBValue("H", "log0_day_counter"),
+        BBValue("H", "day_counter"),
         # bytes 2-3: 16-bit wall time in seconds/2
-        BBValue("H", "log0_wall_time", lambda value: value * 2),
+        BBValue("H", "wall_time", lambda value: value * 2),
         # bytes 4-5: 16-bit average battery voltage mV
-        BBValue("H", "log0_avg_battery_voltage_V", cnv.cnv_mV_to_V),
+        BBValue("H", "avg_battery_voltage_V", cnv.cnv_mV_to_V),
         # bytes 6-7: 16-bit average solar current mA
-        BBValue("H", "log0_avg_solar_current_A", cnv.cnv_mA_to_A),
+        BBValue("H", "avg_solar_current_A", cnv.cnv_mA_to_A),
         # bytes 8: solar charger status: aktiv, standby, reduced
-        BBValue("B", "log0_solar_charger_status", cnv.cnv_solar_status),
+        BBValue("B", "solar_charger_status", cnv.cnv_solar_status),
         # bytes 9-10: 16-bit average battery current 100 mA
-        BBValue("H", "log0_avg_battery_current_A", cnv.cnv_100mA_to_A),
+        BBValue("H", "avg_battery_current_A", cnv.cnv_100mA_to_A),
         # bytes 11-12: 16-bit battery SOC 100 mAh
-        BBValue("H", "log0_battery_state_of_charge_A", cnv.cnv_mA_to_A),
+        BBValue("H", "battery_state_of_charge_A", cnv.cnv_mA_to_A),
         # bytes 13+ 0-1: 16-bit day counter (relative to current day in frame type 0x00)
-        BBValue("H", "log0_day_counter"),
+        BBValue("H", "day_counter"),
         # bytes 13+ 2-3: 16-bit wall time in seconds/2
-        BBValue("H", "log0_wall_time", lambda value: value * 2),
+        BBValue("H", "wall_time", lambda value: value * 2),
         # bytes 13+ 4-5: 16-bit average battery voltage mV
-        BBValue("H", "log0_avg_battery_voltage_V", cnv.cnv_mV_to_V),
+        BBValue("H", "avg_battery_voltage_V", cnv.cnv_mV_to_V),
         # bytes 13+ 6-7: 16-bit average solar current mA
-        BBValue("H", "log0_avg_solar_current_A", cnv.cnv_mA_to_A),
+        BBValue("H", "avg_solar_current_A", cnv.cnv_mA_to_A),
         # bytes 13+ 8: solar charger status: aktiv, standby, reduced
-        BBValue("B", "log0_solar_charger_status", cnv.cnv_solar_status),
+        BBValue("B", "solar_charger_status", cnv.cnv_solar_status),
         # bytes 13+ 9-10: 16-bit average battery current 100 mA
-        BBValue("H", "log0_avg_battery_current_A", cnv.cnv_100mA_to_A),
+        BBValue("H", "avg_battery_current_A", cnv.cnv_100mA_to_A),
         # bytes 13+ 11-12: 16-bit battery SOC 100 mAh
-        BBValue("H", "log0_battery_state_of_charge_A", cnv.cnv_mA_to_A),
+        BBValue("H", "battery_state_of_charge_A", cnv.cnv_mA_to_A),
         # bytes 26-35: reserved
         BBValueIgnore(10),
         # byte 36: 8-bit frame type 0x01
@@ -96,44 +96,44 @@ LogEntryFrameOld = BBFrame(
 )
 
 LogEntryFrameNew = BBFrame(
-    output_id="log/entry",
+    output_id="log/day/{day_counter}",
     fields=[
         # bytes 0-1: 16-bit day counter (relative to current day in frame type 0x00)
-        BBValue("H", "log0_day_counter"),
+        BBValue("H", "day_counter"),
         # bytes 2-3: 16-bit wall time in seconds/2
-        BBValue("H", "log0_wall_time", lambda value: value * 2),
+        BBValue("H", "wall_time", lambda value: value * 2),
         # bytes 4-5: 16-bit average battery voltage mV
-        BBValue("H", "log0_avg_battery_voltage_V", cnv.cnv_mV_to_V),
+        BBValue("H", "avg_battery_voltage_V", cnv.cnv_mV_to_V),
         # bytes 6-7: 16-bit average solar current mA
-        BBValue("H", "log0_avg_solar_current_A", cnv.cnv_mA_to_A),
+        BBValue("H", "avg_solar_current_A", cnv.cnv_mA_to_A),
         # bytes 8: solar charger status: aktiv, standby, reduced
-        BBValue("B", "log0_solar_charger_status", cnv.cnv_solar_status),
+        BBValue("B", "solar_charger_status", cnv.cnv_solar_status),
         # bytes 9-10: 16-bit average battery current 100 mA
-        BBValue("H", "log0_avg_battery_current_A", cnv.cnv_100mA_to_A),
+        BBValue("H", "avg_battery_current_A", cnv.cnv_100mA_to_A),
         # bytes 11-12: 16-bit battery SOC 100 mAh
-        BBValue("H", "log0_battery_state_of_charge_A", cnv.cnv_mA_to_A),
+        BBValue("H", "battery_state_of_charge_A", cnv.cnv_mA_to_A),
         # bytes 13-14: 16-bit booster average input voltage 10mV (starter)**
-        BBValue("H", "log0_avg_booster_input_voltage_V", cnv.cnv_10mV_to_V),
+        BBValue("H", "avg_booster_input_voltage_V", cnv.cnv_10mV_to_V),
         # bytes 15-16: signed 16-bit booster average current 100 mA**
-        BBValue("h", "log_avg_booster_current_A", cnv.cnv_100mA_to_A),
+        BBValue("h", "avg_booster_current_A", cnv.cnv_100mA_to_A),
         # bytes 17+ 0-1: 16-bit day counter (relative to current day in frame type 0x00)
-        BBValue("H", "log1_day_counter"),
+        BBValue("H", "day_counter"),
         # bytes 17+ 2-3: 16-bit wall time in seconds/2
-        BBValue("H", "log1_wall_time", lambda value: value * 2),
+        BBValue("H", "wall_time", lambda value: value * 2),
         # bytes 17+ 4-5: 16-bit average battery voltage mV
-        BBValue("H", "log1_avg_battery_voltage_V", cnv.cnv_mV_to_V),
+        BBValue("H", "avg_battery_voltage_V", cnv.cnv_mV_to_V),
         # bytes 17+ 6-7: 16-bit average solar current mA
-        BBValue("H", "log1_avg_solar_current_A", cnv.cnv_mA_to_A),
+        BBValue("H", "avg_solar_current_A", cnv.cnv_mA_to_A),
         # bytes 17+ 8: solar charger status: aktiv, standby, reduced
-        BBValue("B", "log1_solar_charger_status", cnv.cnv_solar_status),
+        BBValue("B", "solar_charger_status", cnv.cnv_solar_status),
         # bytes 17+ 9-10: 16-bit average battery current 100 mA
-        BBValue("H", "log1_avg_battery_current_A", cnv.cnv_100mA_to_A),
+        BBValue("H", "avg_battery_current_A", cnv.cnv_100mA_to_A),
         # bytes 17+ 11-12: 16-bit battery SOC 100 mAh
-        BBValue("H", "log1_battery_state_of_charge_A", cnv.cnv_mA_to_A),
+        BBValue("H", "battery_state_of_charge_A", cnv.cnv_mA_to_A),
         # bytes 17+ 13-14: 16-bit booster average input voltage 10mV (starter)**
-        BBValue("H", "log1_avg_booster_input_voltage_V", cnv.cnv_10mV_to_V),
+        BBValue("H", "avg_booster_input_voltage_V", cnv.cnv_10mV_to_V),
         # bytes 17+ 15-16: signed 16-bit booster average current 100 mA**
-        BBValue("h", "log1_avg_booster_current_A", cnv.cnv_100mA_to_A),
+        BBValue("h", "avg_booster_current_A", cnv.cnv_100mA_to_A),
         # bytes 34-35: reserved
         BBValueIgnore(2),
         # byte 36: 8-bit frame type 0x01

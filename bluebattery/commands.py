@@ -64,7 +64,7 @@ class BBValueIgnore(BBValue):
 
 @dataclass
 class BBFrame:
-    output_id: str
+    output_id: str  # note: may contain placeholders for output field values
     fields: List[BBValue]
 
     def format(self):
@@ -74,15 +74,25 @@ class BBFrame:
         non_ignore_fields = filter(
             lambda field: type(field) is not BBValueIgnore, self.fields
         )
-        return (
-            self.output_id,
-            {
-                field.output_id: field.value(raw_value)
-                for field, raw_value in zip(
-                    non_ignore_fields, struct.unpack_from(self.format(), value)
-                )
-            },
-        )
+
+        # field values, raw from the struct unpacking
+        raw_values = zip(non_ignore_fields, struct.unpack_from(self.format(), value))
+
+        """
+        Frames with multiple sub-frames may contain the same field name twice. Once 
+        the same field name has been observed twice, we emit a sub-frame result and
+        continue with the rest of the frame.
+        """
+        output = {}
+
+        for field, raw_value in raw_values:
+            # existing field name indicates: begin of new sub-frame! emit old frame first
+            if field.output_id in output:
+                yield (self.output_id.format(**output), output)
+            # existing field value will be overwritten as necessary
+            output[field.output_id] = field.value(raw_value)
+
+        yield (self.__class__, self.output_id.format(**output), output)
 
 
 @dataclass

@@ -21,13 +21,15 @@ class BBCharacteristic:
             characteristic.enable_notifications()
 
     def process(self, value):
-        retval = self.READ.process(value)
+        frames = list(self.READ.process(value))
         if self.callback:
-            self.callback(self, retval)
+            self.log.debug("Calling callback.")
+            cb = self.callback
             self.callback = None
-        return retval
+            cb(self, frames)
+        return frames
 
-    def read(self, callback):
+    def read(self, callback=None):
         self.callback = callback
         if not self.characteristic:
             raise Exception("Characteristic not discovered yet!")
@@ -55,7 +57,7 @@ class BCLog(BBCharacteristic):
 
     GATT_CHARACTERISTIC_UUID = "4b616907-40bd-428b-bf06-698e5e422cd9"
     READ = BBFrameTypeSwitch(
-        "36xc",  # 36th byte is the frame type indicator
+        "36xB",  # 36th byte is the frame type indicator
         {
             (0x00,): frametypes.LogEntryDaysFrame,
             (0x01,): frametypes.LogEntryFrameOld,
