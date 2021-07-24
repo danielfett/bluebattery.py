@@ -7,6 +7,45 @@ import signal
 import json
 
 
+from gi.repository import GObject
+
+
+class ReaderLogic:
+    TIMEOUT_LOG = 60 * 60 * 1000  # once every hour
+
+    def __init__(self, read_log):
+        self.read_log = read_log
+        self.log_info = {
+            "first_day_seen": None,
+            "first_frametype_seen": None,
+        }
+
+    def ready_callback(self, device):
+        self.device = device
+        if self.read_log:
+            GObject.timeout_add(self.TIMEOUT_LOG, self.start_read_log)
+            self.start_read_log()
+
+    def start_read_log(self):
+        self.device.characteristics_by_class[BCSec].read(self.continue_read_log)
+        return True
+
+    def continue_read_log(self, characteristic, frames):
+        if not isinstance(characteristic, BCSec):
+            for frametype, measurement, values in frames:
+                if not self.log_info["first_frametype_seen"]:
+                    self.log_info["first_frametype_seen"] = frametype
+                    self.log_info["first_day_seen"] = values["day_counter"]
+
+                elif (
+                    frametype == self.log_info["first_frametype_seen"]
+                    and values["day_counter"] == self.log_info["first_day_seen"]
+                ):
+                    # finished reading log entries
+                    return
+        self.device.characteristics_by_class[BCLog].read(self.continue_read_log)
+
+
 def default_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -21,13 +60,20 @@ def default_parser():
         help="Device name of bluetooth adapter.",
         default="hci0",
     )
+    parser.add_argument(
+        "--read-log",
+        "-l",
+        help="Read the log files of BB every hour.",
+        action="store_true",
+    )
     return parser
 
 
-def run(args, recv_callback, ready_callback=None):
+def run(args, recv_callback):
+    reader_logic = ReaderLogic(args.read_log)
     manager = BBDeviceManager(
         on_message=recv_callback,
-        on_device_ready=ready_callback,
+        on_device_ready=reader_logic.ready_callback,
         target_mac_address=args.mac_address,
         adapter_name=args.device,
     )
@@ -67,26 +113,7 @@ def cli():
             print(f"  {key:>30} | {value}")
         print()
 
-    def read_sec_cb(device: BBDevice):
-        info = {
-            'first_day_seen': None,
-            'first_frametype_seen': None,
-        }
-        def read_log_cb(characteristic, frames):
-            if not isinstance(characteristic, BCSec):
-                for frametype, measurement, values in frames:
-                    if not info['first_frametype_seen']:
-                        info['first_frametype_seen'] = frametype
-                        info['first_day_seen'] = values['day_counter']
-                        
-                    elif frametype == info['first_frametype_seen'] and values['day_counter'] == info['first_day_seen']:
-                        print("Finished reading history values.")
-                        return
-            device.characteristics_by_class[BCLog].read(read_log_cb)
-
-        device.characteristics_by_class[BCSec].read(read_log_cb)
-
-    run(args, recv_callback, read_sec_cb)
+    run(args, recv_callback)
 
 
 def mqtt():
@@ -145,9 +172,7 @@ def mqtt():
     mqtt_client.loop_start()
 
     def recv_callback_collect(characteristic, frametype, measurement, values):
-        mqtt_client.publish(
-            mktopic(measurement), json.dumps(dict(values), default=str)
-        )
+        mqtt_client.publish(mktopic(measurement), json.dumps(dict(values), default=str))
 
     def recv_callback_single(characteristic, frametype, measurement, values):
         for key, value in values.items():

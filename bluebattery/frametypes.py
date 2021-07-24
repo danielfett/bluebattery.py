@@ -10,8 +10,21 @@ from .commands import (
 SecFrame = BBFrame(output_id="sec", fields=[BBValue("i", "time_of_day_s")])
 
 
+def add_reverse_day_counter(characteristic, output_values):
+    """
+    Frame postprocessing function to create a negative day counter (today=0, yesterday=1, etc.).
+    """
+
+    if "max_day_count" in output_values:
+        characteristic.max_days_observed = output_values["max_day_count"]
+
+    output_values["days_ago"] = (
+        output_values["max_day_count"] - output_values["day_counter"]
+    )
+
+
 LogEntryDaysFrame = BBFrame(
-    output_id="log/day/{day_counter}",
+    output_id="log/day/-{days_ago}",
     fields=[
         # bytes 0-1: big endian 16 bit mWh per day**
         BBValue("H", "Wh_day", cnv.cnv_mW_to_W),
@@ -54,11 +67,12 @@ LogEntryDaysFrame = BBFrame(
         # bytes 37-38: big endian 16-bit total booster charge per day 100 mAh (V304)**
         BBValue("H", "total_booster_charge_day_Ah", cnv.cnv_100mA_to_A),
     ],
+    postprocess=add_reverse_day_counter,
 )
 
 # available starting with Version V2xx, not anymore supported starting V306
 LogEntryFrameOld = BBFrame(
-    output_id="log/day/{day_counter}",
+    output_id="log/day/-{days_ago}/extended",
     fields=[
         # bytes 0-1: 16-bit day counter (relative to current day in frame type 0x00)
         BBValue("H", "day_counter"),
@@ -93,10 +107,11 @@ LogEntryFrameOld = BBFrame(
         # byte 36: 8-bit frame type 0x01
         BBValueIgnore(),
     ],
+    postprocess=add_reverse_day_counter,
 )
 
 LogEntryFrameNew = BBFrame(
-    output_id="log/day/{day_counter}",
+    output_id="log/day/-{days_ago}/extended",
     fields=[
         # bytes 0-1: 16-bit day counter (relative to current day in frame type 0x00)
         BBValue("H", "day_counter"),
@@ -139,6 +154,7 @@ LogEntryFrameNew = BBFrame(
         # byte 36: 8-bit frame type 0x01
         BBValueIgnore(),
     ],
+    postprocess=add_reverse_day_counter,
 )
 
 

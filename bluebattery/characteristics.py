@@ -21,7 +21,7 @@ class BBCharacteristic:
             characteristic.enable_notifications()
 
     def process(self, value):
-        frames = list(self.READ.process(value))
+        frames = list(self.READ.process(self, value))
         if self.callback:
             self.log.debug("Calling callback.")
             cb = self.callback
@@ -64,6 +64,9 @@ class BCLog(BBCharacteristic):
             (0x02,): frametypes.LogEntryFrameNew,
         },
     )
+
+    # Helper variable to reverse the day counter.
+    max_days_observed = 0
 
 
 class BCLive(BBCharacteristic):

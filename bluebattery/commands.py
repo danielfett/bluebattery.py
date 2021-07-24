@@ -66,11 +66,12 @@ class BBValueIgnore(BBValue):
 class BBFrame:
     output_id: str  # note: may contain placeholders for output field values
     fields: List[BBValue]
+    postprocess: Optional[Callable] = None
 
     def format(self):
         return BYTE_ORDER + "".join(field.get_struct() for field in self.fields)
 
-    def process(self, value):
+    def process(self, characteristic, value):
         non_ignore_fields = filter(
             lambda field: type(field) is not BBValueIgnore, self.fields
         )
@@ -79,7 +80,7 @@ class BBFrame:
         raw_values = zip(non_ignore_fields, struct.unpack_from(self.format(), value))
 
         """
-        Frames with multiple sub-frames may contain the same field name twice. Once 
+        Frames with multiple sub-frames may contain the same field name twice. Once
         the same field name has been observed twice, we emit a sub-frame result and
         continue with the rest of the frame.
         """
@@ -88,11 +89,15 @@ class BBFrame:
         for field, raw_value in raw_values:
             # existing field name indicates: begin of new sub-frame! emit old frame first
             if field.output_id in output:
-                yield (self.output_id.format(**output), output)
+                if self.postprocess:
+                    self.postprocess(characteristic, output)
+                yield (self, self.output_id.format(**output), output)
             # existing field value will be overwritten as necessary
             output[field.output_id] = field.value(raw_value)
 
-        yield (self.__class__, self.output_id.format(**output), output)
+        if self.postprocess:
+            self.postprocess(characteristic, output)
+        yield (self, self.output_id.format(**output), output)
 
 
 @dataclass
@@ -100,10 +105,10 @@ class BBFrameTypeSwitch:
     index_byte: str
     frame_types: Dict[Tuple[int, ...], BBFrame]
 
-    def process(self, value):
+    def process(self, characteristic, value):
         index_value = struct.unpack_from(BYTE_ORDER + self.index_byte, value)
         if index_value not in self.frame_types:
             raise Exception(f"Frame type not found: {index_value!r}")
         log.debug(f"Selected index: {index_value}.")
 
-        return self.frame_types[index_value].process(value)
+        return self.frame_types[index_value].process(characteristic, value)

@@ -8,7 +8,7 @@ Features:
 - [x] Publishes value to an MQTT broker
 - [x] Auto-discovery of BB devices
 - [ ] Persisting previously discovered BB device
-- [ ] Access to stored logs
+- [x] Access to stored logs
 - [ ] Modification of device settings
 - [ ] Firmware update
 
