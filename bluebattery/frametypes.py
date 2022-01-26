@@ -167,7 +167,7 @@ BCLiveMeasurementsFrame = BBFrame(
         # 2 bytes (17) value battery voltage in mV
         BBValue("H", "battery_voltage_V", cnv.cnv_mV_to_V),
         # 2 bytes (18) value solar charge current in 10mA**
-        BBValue("H", "solar_charge_current_A", cnv.cnv_10mA_to_A),
+        BBValue("H", "solar_charge_current_A", cnv.cnv_mA_to_A),
         # 3 bytes (00) value Battery Current in mA
         BBValue("¾", "battery_current_A", cnv.cnv_mA_to_A),
     ],
@@ -184,7 +184,7 @@ BCSolarChargerEBLFrame = BBFrame(
         # 2 bytes (10) value Solar max Watt per day in 1W
         BBValue("H", "max_solar_watt_day_W"),
         # 2 bytes (19) value solar charge in 10mAh (*)
-        BBValue("H", "solar_current_A", cnv.cnv_10mA_to_A),
+        BBValue("H", "solar_current_Ah", cnv.cnv_10mA_to_A),
         # 2 bytes (20) value solar energy in Wh
         BBValue("H", "solar_energy_Wh"),
         # 1 byte (21) status solar charger (*) bit 7 indicates sleep
