@@ -77,6 +77,7 @@ class BCLive(BBCharacteristic):
             # byte 0: type
             # byte 1: length
             (0x00, 0x07): frametypes.BCLiveMeasurementsFrame,
+            (0x00, 0x09): frametypes.BCLiveMeasurementsFrameExtended,
             (0x01, 0x09): frametypes.BCSolarChargerEBLFrame,
             (0x01, 0x0B): frametypes.BCSolarChargerStandardFrame,
             (0x01, 0x0C): frametypes.BCSolarChargerExtendedFrame,
