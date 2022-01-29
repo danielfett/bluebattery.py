@@ -1,4 +1,5 @@
 import logging
+from time import sleep
 
 import gatt
 
@@ -64,6 +65,9 @@ class BBDeviceManager(gatt.DeviceManager):
 
 class BBDevice(gatt.Device):
     auto_reconnect = True
+    connection_attempts = 0
+
+    MAX_CONNECTION_ATTEMPTS = 10
 
     def __init__(self, on_message=None, on_ready=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -77,6 +81,10 @@ class BBDevice(gatt.Device):
         if on_ready:
             self.callbacks["ready"] = on_ready
 
+    def connect(self):
+        self.connection_attempts += 1
+        super().connect()
+
     def on_message(self, callback):
         self.callbacks["message"] = callback
 
@@ -84,6 +92,7 @@ class BBDevice(gatt.Device):
         self.callbacks["ready"] = callback
 
     def connect_succeeded(self):
+        self.connection_attempts = 0
         super().connect_succeeded()
         self.log.info("Connected")
 
@@ -91,6 +100,11 @@ class BBDevice(gatt.Device):
         super().connect_failed(error)
         self.log.info("Connection failed")
         if self.auto_reconnect:
+            if self.connection_attempts > self.MAX_CONNECTION_ATTEMPTS:
+                self.log.info("Too many failed connection attempts, exiting.")
+                self.manager.stop()
+                return
+            sleep(10)
             self.log.debug("Trying to reconnect")
             self.connect()
 
@@ -138,7 +152,8 @@ class BBDevice(gatt.Device):
 
     def characteristic_value_updated(self, characteristic, value):
         bbcharacteristic = self.characteristics_by_uuid[characteristic.uuid]
-        self.log.debug(f"Received value for {characteristic.uuid} ({len(value)} bytes)")
+        debug = ''.join('{:02x}'.format(x) for x in value)
+        self.log.debug(f"Received value for {characteristic.uuid}: {debug}")
         if self.callbacks.get("message", None):
             for frametype, measurement, values in bbcharacteristic.process(value):
                 self.callbacks["message"](

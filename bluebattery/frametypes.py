@@ -194,6 +194,7 @@ BCSolarChargerEBLFrame = BBFrame(
         BBValue("H", "max_solar_watt_day_W", lambda value: value / 0.95),
         # 2 bytes (19) value solar charge in 10mAh (*)
         BBValue("H", "solar_charge_day_Ah", cnv.cnv_10mAh_to_Ah),
+        BBValue("H", "solar_current_Ah", cnv.cnv_10mA_to_A),
         # 2 bytes (20) value solar energy in Wh
         BBValue("H", "solar_energy_day_Wh"),
         # 1 byte (21) status solar charger (*) bit 7 indicates sleep
