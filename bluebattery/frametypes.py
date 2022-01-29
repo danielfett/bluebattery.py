@@ -173,6 +173,15 @@ BCLiveMeasurementsFrame = BBFrame(
     ],
 )
 
+BCLiveMeasurementsFrameExtended = BBFrame(
+    output_id="live/measurement_ext",
+    fields=BCLiveMeasurementsFrame.fields
+    + [
+        # 2 bytes optional heap size in bytes
+        BBValue("H", "heap_size_bytes"), 
+    ],
+)
+
 BCSolarChargerEBLFrame = BBFrame(
     output_id="live/solar_charger_ebl",
     fields=[
