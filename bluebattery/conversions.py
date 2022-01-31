@@ -11,6 +11,8 @@ def cnv_10mV_to_V(_10mV):
 
 cnv_10mA_to_A = cnv_10mV_to_V
 
+def cnv_10mAh_to_Ah(_10mAh):
+    return _10mAh / 100 
 
 def cnv_mA_to_A(mA):
     return mA / 1000

@@ -166,10 +166,19 @@ BCLiveMeasurementsFrame = BBFrame(
         BBValueIgnore(2),
         # 2 bytes (17) value battery voltage in mV
         BBValue("H", "battery_voltage_V", cnv.cnv_mV_to_V),
-        # 2 bytes (18) value solar charge current in 10mA**
+        # 2 bytes (18) value solar charge current in mA**
         BBValue("H", "solar_charge_current_A", cnv.cnv_mA_to_A),
         # 3 bytes (00) value Battery Current in mA
         BBValue("¾", "battery_current_A", cnv.cnv_mA_to_A),
+    ],
+)
+
+BCLiveMeasurementsFrameExtended = BBFrame(
+    output_id="live/measurement_ext",
+    fields=BCLiveMeasurementsFrame.fields
+    + [
+        # 2 bytes optional heap size in bytes
+        BBValue("H", "heap_size_bytes"), 
     ],
 )
 
@@ -181,12 +190,12 @@ BCSolarChargerEBLFrame = BBFrame(
         BBValueIgnore(2),
         # 2 bytes (09) value Solar max Current per day in mA
         BBValue("H", "max_solar_current_day_A", cnv.cnv_mA_to_A),
-        # 2 bytes (10) value Solar max Watt per day in 1W
-        BBValue("H", "max_solar_watt_day_W"),
+        # 2 bytes (10) value Solar max Watt per day in 1W  use 95% efficiency
+        BBValue("H", "max_solar_watt_day_W", lambda value: value / 0.95),
         # 2 bytes (19) value solar charge in 10mAh (*)
-        BBValue("H", "solar_current_Ah", cnv.cnv_10mA_to_A),
+        BBValue("H", "solar_charge_day_Ah", cnv.cnv_10mAh_to_Ah),
         # 2 bytes (20) value solar energy in Wh
-        BBValue("H", "solar_energy_Wh"),
+        BBValue("H", "solar_energy_day_Wh"),
         # 1 byte (21) status solar charger (*) bit 7 indicates sleep
         BBValue("B", "solar_charger_status"),
     ],
@@ -237,21 +246,21 @@ BCBatteryComputer1Frame = BBFrame(
         # byte 1: length
         BBValueIgnore(2),
         # 2 bytes (01) value Battery Charge in 10mAh (*)
-        BBValue("H", "battery_charge_Ah", cnv.cnv_10mA_to_A),
+        BBValue("H", "battery_charge_Ah", cnv.cnv_10mAh_to_Ah),
         # 2 bytes (02) value SOC in 0.1% steps
         BBValue("H", "state_of_charge_percent", lambda x: x / 10),
         # 2 bytes (03) value Battery max Current per day in 10mA (*)
         BBValue("H", "max_battery_current_day_A", cnv.cnv_10mA_to_A),
         # 2 bytes (04) value Battery min Current per day in 10mA (*)
-        BBValue("H", "min_battery_current_day_A", cnv.cnv_10mA_to_A),
+        BBValue("H", "min_battery_current_day_A", lambda x: x / -10),
         # 2 bytes (05) value Battery max Charge per day in 10mAh
-        BBValue("H", "max_battery_charge_day_A", cnv.cnv_10mA_to_A),
+        BBValue("H", "max_battery_charge_day_Ah", cnv.cnv_10mAh_to_Ah),
         # 2 bytes (06) value Battery min Charge per day in 10mAh
-        BBValue("H", "min_battery_charge_day_A", cnv.cnv_10mA_to_A),
-        # 2 bytes (07) value Battery max Voltage per day in 10mV
-        BBValue("H", "max_battery_voltage_day_V", cnv.cnv_100mV_to_V),
-        # 2 bytes (08) value Battery min Volatge per day in 10mV
-        BBValue("H", "min_battery_voltage_day_V", cnv.cnv_100mV_to_V),
+        BBValue("H", "min_battery_charge_day_Ah", cnv.cnv_10mAh_to_Ah),
+        # 2 bytes (07) value Battery max Voltage per day in mV
+        BBValue("H", "max_battery_voltage_day_V", cnv.cnv_mV_to_V),
+        # 2 bytes (08) value Battery min Voltage per day in mV
+        BBValue("H", "min_battery_voltage_day_V", cnv.cnv_mV_to_V),
     ],
 )
 
@@ -269,13 +278,13 @@ BCBatteryComputer2Frame = BBFrame(
         BBValue("H", "max_temperature_deg_C", cnv.cnv_bb_temp_to_deg_c),
         # 3 bytes (14) value summed total charge per day in 32/225 mAh (*)
         # TODO: unsigned
-        BBValue("¾", "total_charge_day_Ah", lambda x: (x / (32 / 225)) / 1000),
+        BBValue("¾", "total_charge_day_Ah", lambda x: (x * (32 / 225)) / 1000),
         # 3 bytes (15) value summed total discharge per day in 32/225 mAh (*)
         # TODO: unsigned
-        BBValue("¾", "total_discharge_day_Ah", lambda x: (x / (32 / 225)) / 1000),
+        BBValue("¾", "total_discharge_day_Ah", lambda x: (x * (32 / 225)) / 1000),
         # 3 bytes (16) value summed total external charge per in 32/225 mAh (*)
         # TODO: unsigned
-        BBValue("¾", "total_external_charge_day_Ah", lambda x: (x / (32 / 225)) / 1000),
+        BBValue("¾", "total_external_charge_day_Ah", lambda x: (x * (32 / 225)) / 1000),
     ],
 )
 
@@ -313,6 +322,6 @@ BCBoosterDataFrame = BBFrame(
         BBValue("B", "booster_status"),
         # 3 bytes value summed total booster charge per day in 256/18000 Ah
         # TODO: unsigned
-        BBValue("¾", "total_booster_charge_day_Ah", lambda x: x / (256 / 18000)),
+        BBValue("¾", "total_booster_charge_day_Ah", lambda x: x * (256 / 18000)),
     ],
 )
