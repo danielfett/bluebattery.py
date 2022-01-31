@@ -46,12 +46,13 @@ class BBDeviceManager(gatt.DeviceManager):
         device.connect()
 
     def make_device(self, mac_address):
-        return BBDevice(
+        self.target_device = BBDevice(
             on_message=self.on_message,
             on_ready=self.on_device_ready,
             mac_address=mac_address,
             manager=self,
         )
+        return self.target_device
 
     def run(self):
         if self.target_device:
