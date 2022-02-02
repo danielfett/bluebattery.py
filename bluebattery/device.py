@@ -40,6 +40,9 @@ class BBDeviceManager(gatt.DeviceManager):
         super().stop()
 
     def device_discovered(self, device):
+        if self.target_device.mac_address != device.mac_address:
+            self.log.debug(f"Different Device discovered: {device.mac_address}.")
+            return  
         self.log.debug(f"Discovery found device: {device.mac_address}.")
         device.advertised()
         self.stop_discovery()
@@ -57,10 +60,10 @@ class BBDeviceManager(gatt.DeviceManager):
     def run(self):
         if self.target_device:
             self.log.debug("Trying to connect target device.")
-            self.target_device.connect()
+            #self.target_device.connect()
         else:
             self.log.debug("No target device given, starting discovery.")
-            self.start_discovery([self.ADVERTISED_SERVICE_ID])
+        self.start_discovery([self.ADVERTISED_SERVICE_ID])
         super().run()
 
 
