@@ -42,6 +42,7 @@ class BBDeviceManager(gatt.DeviceManager):
     def device_discovered(self, device):
         if self.target_device and self.target_device.mac_address != device.mac_address:
             self.log.debug(f"Different Device discovered: {device.mac_address}.")
+            super().device_discovered(device)
             return  
         self.log.debug(f"Discovery found device: {device.mac_address}.")
         device.advertised()
