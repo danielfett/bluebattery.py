@@ -1,6 +1,6 @@
-## bb_mqtt as Deamon
+## bb_mqtt as Daemon
 
-If you want to send the BlueBattery Data to another server via MQTT it's helpful to start the bb_mqtt as a deamon.
+If you want to send the BlueBattery Data to another server via MQTT it's helpful to start the bb_mqtt as a daemon.
 
 Here a example with Systemctl based on Debian Linux systems like Bullseye for the Raspberry Pi.
 
@@ -30,7 +30,7 @@ At the next stepp we have to make this file executable for root and readable for
 
 `sudo chmod 644 /lib/systemd/system/bluebattery.service`
 
-Now it's possible to start/stop the deamon with
+Now it's possible to start/stop the daemon with
 
 `sudo systemctl start bluebattery`
 
