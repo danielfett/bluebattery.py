@@ -59,6 +59,10 @@ $ bb_mqtt --host my-mqtt.server.example
 
 Use `--collect` to get a more concise MQTT output using JSON objects.
 
+use `--prefix BBX` to pass a specific device name. Here in example BBX
+
+For using the bb_mqtt as deamon [described here](asDeamon.md)
+
 ## Troubleshooting
 
 Depending on your environment, you may need to enable BLE first or to set up your linux user to allow using BLE:
