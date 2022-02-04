@@ -34,7 +34,7 @@ Now it's possible to start/stop the daemon with
 
 `sudo systemctl start bluebattery`
 
-If you have any trouble you can see the status of the deamon with
+If you have any trouble you can see the status of the daemon with
 
 `sudo systemctl status bluebattery`
 
