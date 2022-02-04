@@ -59,7 +59,7 @@ $ bb_mqtt --host my-mqtt.server.example
 
 Use `--collect` to get a more concise MQTT output using JSON objects.
 
-use `--prefix BBX` to pass a specific device name. Here in example BBX
+Use `--prefix BBX` to pass a specific device name. Here in example BBX
 
 For using the bb_mqtt as deamon [described here](asDeamon.md)
 
