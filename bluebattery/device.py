@@ -1,5 +1,6 @@
 import logging
 from time import sleep
+from typing import Dict
 
 import gatt
 
@@ -71,6 +72,8 @@ class BBDeviceManager(gatt.DeviceManager):
 class BBDevice(gatt.Device):
     auto_reconnect = True
     connection_attempts = 0
+    characteristics_by_class: Dict
+    characteristics_by_uuid: Dict
 
     MAX_CONNECTION_ATTEMPTS = 10
 

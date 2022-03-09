@@ -27,6 +27,8 @@ class ReaderLogic:
             self.start_read_log()
 
     def start_read_log(self):
+        if BCSec not in self.device.characteristics_by_class:
+            return True
         self.device.characteristics_by_class[BCSec].read(self.continue_read_log)
         return True
 
