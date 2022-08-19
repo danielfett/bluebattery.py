@@ -134,6 +134,16 @@ def mqtt():
         default="1883",
     )
     parser.add_argument(
+        "--username",
+        "-u",
+        help="MQTT broker username.",
+    )
+    parser.add_argument(
+        "--password",
+        "-pw",
+        help="MQTT broker password.",
+    )
+    parser.add_argument(
         "--prefix",
         help="Prefix for topics sent from this script.",
         default="service/bluebattery",
@@ -170,6 +180,8 @@ def mqtt():
     mqtt_client.enable_logger(log)
     mqtt_client.will_set(mktopic("online"), "0", retain=True)
     mqtt_client.on_connect = on_connect
+    if args.username and args.password:
+        mqtt_client.username_pw_set(args.username, password=args.password)
     mqtt_client.connect_async(args.host, int(args.port))
     mqtt_client.loop_start()
 

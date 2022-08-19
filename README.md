@@ -59,6 +59,8 @@ $ bb_mqtt --host my-mqtt.server.example
 
 Use `--collect` to get a more concise MQTT output using JSON objects.
 
+Use `--username` and `--password` if your MQTT server is configured to use authentication via username and password.
+
 ## Troubleshooting
 
 Depending on your environment, you may need to enable BLE first or to set up your linux user to allow using BLE:
