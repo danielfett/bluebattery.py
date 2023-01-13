@@ -12,13 +12,10 @@ from gi.repository import GObject
 
 class ReaderLogic:
     TIMEOUT_LOG = 60 * 60 * 1000  # once every hour
+    MAX_LOG_FRAMES = 60 * 3  # 60 days, three types of log entries
 
     def __init__(self, read_log):
         self.read_log = read_log
-        self.log_info = {
-            "first_day_seen": None,
-            "first_frametype_seen": None,
-        }
 
     def ready_callback(self, device):
         self.device = device
@@ -29,12 +26,21 @@ class ReaderLogic:
     def start_read_log(self):
         if BCSec not in self.device.characteristics_by_class:
             return True
+        self.log_info = {
+            "first_day_seen": None,
+            "first_frametype_seen": None,
+            "frames_seen": 0,
+        }
         self.device.characteristics_by_class[BCSec].read(self.continue_read_log)
         return True
 
     def continue_read_log(self, characteristic, frames):
         if not isinstance(characteristic, BCSec):
             for frametype, measurement, values in frames:
+                self.log_info["frames_seen"] += 1
+                if self.log_info["frames_seen"] == self.MAX_LOG_FRAMES:
+                    return
+                    
                 if not self.log_info["first_frametype_seen"]:
                     self.log_info["first_frametype_seen"] = frametype
                     self.log_info["first_day_seen"] = values["day_counter"]
