@@ -1,0 +1,23 @@
+# bb.service
+# 
+# To install, copy this file to /etc/systemd/system/bb.service
+# and run:
+#  sudo systemctl daemon-reload
+#  sudo systemctl enable bb.service
+#  sudo systemctl start bb.service
+#
+# This assumes that you have installed bluebattery via `pip3 install git+https://github.com/danielfett/bluebattery.py.git` as the user pi.
+#
+[Unit]
+Description=bluebattery service
+After=network.target
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=20
+User=pi
+ExecStart=/usr/bin/env python3 /home/pi/.local/bin/bb_cli mqtt
+
+[Install]
+WantedBy=multi-user.target

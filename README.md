@@ -23,6 +23,10 @@ sudo apt-get install python3-pip
 pip3 install git+https://github.com/danielfett/bluebattery.py.git
 ```
 
+## Setting up a Systemd Service
+
+See the [systemd service](assets/bb.service) file for details.
+
 
 ## Reading values from the command line
 
@@ -45,6 +49,29 @@ $ bb_cli mqtt
 ```
 
 Append `--help` to see the configuration options.
+
+This is an example of the values published to the MQTT broker:
+
+```
+service/bluebattery/FC:45:C3:CA:FF:EE/live/solar_charger_ext/max_solar_current_day_A 0.0
+service/bluebattery/FC:45:C3:CA:FF:EE/live/solar_charger_ext/max_solar_watt_day_W 0.0
+service/bluebattery/FC:45:C3:CA:FF:EE/live/solar_charger_ext/solar_charge_day_Ah 0.0
+service/bluebattery/FC:45:C3:CA:FF:EE/live/solar_charger_ext/solar_energy_day_Wh 0
+service/bluebattery/FC:45:C3:CA:FF:EE/live/solar_charger_ext/solar_charger_status 1
+service/bluebattery/FC:45:C3:CA:FF:EE/live/solar_charger_ext/solar_module_voltage_V 0.0
+service/bluebattery/FC:45:C3:CA:FF:EE/live/solar_charger_ext/relay_status RelayStatus()
+service/bluebattery/FC:45:C3:CA:FF:EE/live/battery_comp_1/battery_charge_Ah 158.48
+service/bluebattery/FC:45:C3:CA:FF:EE/live/battery_comp_1/state_of_charge_percent 83.4
+service/bluebattery/FC:45:C3:CA:FF:EE/live/battery_comp_1/max_battery_current_day_A 0.0
+service/bluebattery/FC:45:C3:CA:FF:EE/live/battery_comp_1/min_battery_current_day_A -1.1
+service/bluebattery/FC:45:C3:CA:FF:EE/live/battery_comp_1/max_battery_charge_day_Ah 16.16
+service/bluebattery/FC:45:C3:CA:FF:EE/live/battery_comp_1/min_battery_charge_day_Ah 15.84
+service/bluebattery/FC:45:C3:CA:FF:EE/live/battery_comp_1/max_battery_voltage_day_V 12.54
+service/bluebattery/FC:45:C3:CA:FF:EE/live/battery_comp_1/min_battery_voltage_day_V 12.5
+service/bluebattery/FC:45:C3:CA:FF:EE/live/info/battery_voltage_V 12.61
+service/bluebattery/FC:45:C3:CA:FF:EE/live/info/starter_battery_voltage_V 12.43
+```
+
 
 ## Troubleshooting
 
