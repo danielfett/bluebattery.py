@@ -111,4 +111,4 @@ class BBFrameTypeSwitch:
             raise Exception(f"Frame type not found: {index_value!r}")
         log.debug(f"Selected index: {index_value}.")
 
-        return self.frame_types[index_value].process(characteristic, value)
+        yield from self.frame_types[index_value].process(characteristic, value)
