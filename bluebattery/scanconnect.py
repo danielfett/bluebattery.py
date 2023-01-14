@@ -6,6 +6,7 @@ import coloredlogs
 from bleak import BleakScanner, exc
 
 from .bbdevice import BlueBattery
+from .output.log import LogOutput
 
 # Set up logging with colored output
 coloredlogs.install(level="DEBUG")
@@ -23,14 +24,6 @@ KNOWN_DEVICES = (
 log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
 
-
-
-class LogOutput:
-    def __init__(self, log):
-        self.log = log.getChild("output")
-
-    def put(self, data):
-        self.log.debug(data)
 
 async def scan_and_connect(tasks, loop, output):
     device_list = []
@@ -87,17 +80,7 @@ async def scanTask():
             await scan_and_connect(tasks, loop, output)
         except exc.BleakError as e:
             log.exception("Error scanning for devices")
-        await asyncio.sleep(10.0)
-
-
-async def main():
-    loop = asyncio.get_running_loop()
-    loop.create_task(scanTask())
-
-    # run until shutdown
-    while True:
-        await asyncio.sleep(1.0)
-
+        await asyncio.sleep(20.0)
 
 def shutdown(_, __):
     log.info("Shutting down...")
@@ -111,4 +94,4 @@ signal.signal(signal.SIGINT, shutdown)
 signal.signal(signal.SIGTERM, shutdown)
 
 log.info("Started!")
-asyncio.run(main())
+asyncio.run(scanTask())

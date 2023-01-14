@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="bluebattery.py",
-    version="0.0.1",
+    version="1.0.0",
     author="Daniel Fett",
     author_email="mail@danielfett.de",
     description="Software for interacting with the BlueBattery line of battery computers.",
@@ -20,14 +20,14 @@ setuptools.setup(
     ],
     python_requires=">=3.6",
     install_requires=[
-        "gatt",
+        "bleak",
         "py-flags",
+        "coloredlogs",
+        "paho-mqtt",
     ],
     entry_points={
         "console_scripts": [
-            "bb_cli=bluebattery.cli:cli",
-            "bb_mqtt=bluebattery.cli:mqtt",
-            "bb_live=bluebattery.cli:live",
+            "bb_cli=bluebattery.cli",
         ],
     },
 )

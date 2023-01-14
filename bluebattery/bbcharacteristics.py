@@ -1,4 +1,5 @@
 import asyncio 
+from concurrent.futures import CancelledError
 
 from . import frametypes
 from .commands import BBFrameTypeSwitch
@@ -18,35 +19,42 @@ class BCLog(ReadPeriodicCharacteristic):
     PERIOD = 1
     WAIT_BETWEEN = 60 * 60  # once per hour
     MAX_LOG_FRAMES = 60 * 3  # 60 days, three types of log entries
-
+    INITIAL_WAIT = 30
 
     async def read_periodically(self):
         self.log.debug(f"Starting periodic read of {self.UUID}")
-        while True:
-            self.log.debug(f"Starting new readout of logs from {self.UUID}")
-            self.reset_log_info()
+        try:
+            # wait some time so that sec has been read
+            await asyncio.sleep(self.INITIAL_WAIT)
             while True:
-                # read characteristic
-                data = await self.client.read_gatt_char(self.UUID)
-                self.log.debug(f"Read {self.UUID}: {' '.join(f'{b:02x}' for b in data)}")
+                self.log.debug(f"Starting new readout of logs from {self.UUID}")
+                self.reset_log_info()
+                while True:
+                    # read characteristic
+                    data = await self.client.read_gatt_char(self.UUID)
+                    self.log.debug(f"Read {self.UUID}: {' '.join(f'{b:02x}' for b in data)}")
 
-                parsed = self.parse(data)
+                    parsed = self.parse(data)
 
-                wrapped = False
-                for frame in parsed:
-                    self.log.debug(f"Parsed frame: {frame}")
-                    self.output.put(frame)
-                    if self.check_log_has_wrapped(frame):
-                        wrapped = True
+                    wrapped = False
+                    for frame in parsed:
+                        self.log.debug(f"Parsed frame: {frame}")
+                        self.output_callback(frame)
+                        if self.check_log_has_wrapped(frame):
+                            wrapped = True
+                            break
+
+                    if wrapped:
+                        self.log.debug("Log has wrapped, stopping readout")
                         break
 
-                if wrapped:
-                    break
-
-                # wait a second before continuing reading
-                await asyncio.sleep(self.PERIOD)
-            await asyncio.sleep(self.WAIT_BETWEEN)
-
+                    # wait a second before continuing reading
+                    await asyncio.sleep(self.PERIOD)
+                await asyncio.sleep(self.WAIT_BETWEEN)
+        except CancelledError:
+            self.log.debug("Task cancelled")
+        except Exception as e:
+            self.log.exception("Error reading characteristic")
 
     def reset_log_info(self):
         self.log_info = {

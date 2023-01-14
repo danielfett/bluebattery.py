@@ -7,7 +7,6 @@ Features:
 - [x] Reading of periodically sent measurements
 - [x] Publishes value to an MQTT broker
 - [x] Auto-discovery of BB devices
-- [ ] Persisting previously discovered BB device
 - [x] Access to stored logs
 - [ ] Modification of device settings
 - [ ] Firmware update
@@ -24,40 +23,24 @@ pip3 install git+https://github.com/danielfett/bluebattery.py.git
 ## Reading values from the command line
 
 ```
-$ bb_cli 
+$ bb_cli log
 ```
 
-(If you run into troubles connecting to the device, or if there are multiple BB devices nearby, provide the MAC address of the device. It can be found in the BB app. E.g.: `$ bb_cli AA:BB:CC:DD:EE:FF`)
-
-For an updating live view, first run
+If you want to see more details of what is going on, use the debug flag:
 
 ```
-$ pip3 install rich
+$ bb_cli --log-level DEBUG log
 ```
-
-and then
-
-```
-$ bb_live 
-```
-
-![live view interface](assets/live_interface.png?raw=true)
 
 ## Publishing values to an MQTT server
 
-If you want to use the MQTT features, first run
+If you want to use the MQTT features, start the MQTT publisher using
 
 ```
-pip3 install paho-mqtt
+$ bb_cli mqtt
 ```
 
-The start the MQTT publisher using
-
-```
-$ bb_mqtt --host my-mqtt.server.example
-```
-
-Use `--collect` to get a more concise MQTT output using JSON objects.
+Append `--help` to see the configuration options.
 
 ## Troubleshooting
 
