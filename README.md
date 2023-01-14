@@ -11,6 +11,10 @@ Features:
 - [ ] Modification of device settings
 - [ ] Firmware update
 
+## Changelog
+
+2023-01-14: Moved to bleak library. This should make the software much more reliable. Multiple devices are now supported and the MQTT topic has changed to include the device address.
+
 ## Installation
 
 ```
