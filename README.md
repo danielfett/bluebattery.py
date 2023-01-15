@@ -17,11 +17,22 @@ Features:
 
 ## Installation
 
+To install the latest published version:
+
+```
+sudo apt-get install python3-pip
+# log out and in again to apply new environment variables 
+pip3 install bluebattery-py
+```
+
+To install the latest version from this git repository:
+
 ```
 sudo apt-get install python3-pip
 # log out and in again to apply new environment variables 
 pip3 install git+https://github.com/danielfett/bluebattery.py.git
 ```
+
 
 ## Setting up a Systemd Service
 

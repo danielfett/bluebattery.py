@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "bluebattery-py"
-version = "1.0.0"
+version = "1.0.1"
 description = ""
 authors = ["Daniel Fett <fett@danielfett.de>"]
 readme = "README.md"
@@ -18,3 +18,6 @@ hummable = "^0.1.0"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+bb_cli = "bluebattery.cli:run"
