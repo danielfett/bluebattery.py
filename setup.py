@@ -24,10 +24,11 @@ setuptools.setup(
         "py-flags",
         "coloredlogs",
         "paho-mqtt",
+        "hummable",
     ],
     entry_points={
         "console_scripts": [
-            "bb_cli=bluebattery.cli",
+            "bb_cli=bluebattery.cli:run",
         ],
     },
 )

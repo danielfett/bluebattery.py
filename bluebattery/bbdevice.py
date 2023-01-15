@@ -1,4 +1,4 @@
-from .humble.bledevice import BLEDevice
+from hummable.bledevice import BLEDevice
 from .bbcharacteristics import BCLog, BCLive, BCSec
 
 

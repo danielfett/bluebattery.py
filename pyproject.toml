@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "bluebattery-py"
+version = "1.0.0"
+description = ""
+authors = ["Daniel Fett <fett@danielfett.de>"]
+readme = "README.md"
+packages = [{include = "bluebattery"}]
+
+[tool.poetry.dependencies]
+python = "^3.7"
+bleak = "^0.19.5"
+py-flags = "^1.1.4"
+coloredlogs = "^15.0.1"
+paho-mqtt = "^1.6.1"
+hummable = "^0.1.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

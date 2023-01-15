@@ -3,7 +3,7 @@ from concurrent.futures import CancelledError
 
 from . import frametypes
 from .commands import BBFrameTypeSwitch
-from .humble.characteristics import ReadPeriodicCharacteristic
+from hummable.characteristics import ReadPeriodicCharacteristic
 
 
 class BCLog(ReadPeriodicCharacteristic):
