@@ -88,6 +88,7 @@ class BCLog(ReadPeriodicCharacteristic):
             (0x00,): frametypes.LogEntryDaysFrame,
             (0x01,): frametypes.LogEntryFrameOld,
             (0x02,): frametypes.LogEntryFrameNew,
+            (0x03,): frametypes.LogEntryFrameLargeSolarCurrent, ###KS
         },
         ).process(self, data)
 
@@ -118,13 +119,18 @@ class BCLive(ReadPeriodicCharacteristic):
                 # byte 1: length
                 (0x00, 0x07): frametypes.BCLiveMeasurementsFrame,
                 (0x00, 0x09): frametypes.BCLiveMeasurementsFrameExtended,
+                (0x00, 0x0A): frametypes.BCLiveMeasurementsFrame_0A, ###KS
                 (0x01, 0x09): frametypes.BCSolarChargerEBLFrame,
                 (0x01, 0x0B): frametypes.BCSolarChargerStandardFrame,
                 (0x01, 0x0C): frametypes.BCSolarChargerExtendedFrame,
+                (0x01, 0x0F): frametypes.BCSolarChargerLargeSolarCurrent, ###KS
                 (0x02, 0x10): frametypes.BCBatteryComputer1Frame,
+                (0x02, 0x11): frametypes.BCBatteryComputer1Frame,
                 (0x03, 0x0F): frametypes.BCBatteryComputer2Frame,
                 (0x04, 0x01): frametypes.BCIntradayLogEntryFrame,
                 (0x05, 0x0A): frametypes.BCBoosterDataFrame,
+                (0x05, 0x0C): frametypes.BCBoosterDataFrameExtended, ###KS
+                (0x05, 0x10): frametypes.BCBoosterDataFrameExtendedBBX, ###KS
                 (0x05, 0x04): frametypes.BCNoBoosterDataFrame,
             },
         ).process(self, data)
