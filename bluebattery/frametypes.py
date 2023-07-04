@@ -7,6 +7,10 @@ from .commands import (
     BBValueIgnore,
 )
 
+import logging
+
+log = logging.getLogger("Frametypes")
+
 SecFrame = BBFrame(output_id="sec", fields=[BBValue("i", "time_of_day_s")])
 
 
@@ -167,7 +171,7 @@ LogEntryFrameLargeSolarCurrent = BBFrame(
         # bytes 4-5: 16-bit average battery voltage mV
         BBValue("H", "avg_battery_voltage_V", cnv.cnv_mV_to_V),
         # bytes 6-7: 16-bit average solar current mA
-        BBValue("H", "avg_solar_current_A", cnv.cnv_8mA_to_A),
+        BBValue("H", "avg_solar_current_A", cnv.cnv_8mA_to_A), # type 3
         # bytes 8: solar charger status: aktiv, standby, reduced
         BBValue("B", "solar_charger_status", cnv.cnv_solar_status),
         # bytes 9-10: 16-bit average battery current 100 mA
@@ -185,7 +189,7 @@ LogEntryFrameLargeSolarCurrent = BBFrame(
         # bytes 17+ 4-5: 16-bit average battery voltage mV
         BBValue("H", "avg_battery_voltage_V", cnv.cnv_mV_to_V),
         # bytes 17+ 6-7: 16-bit average solar current mA
-        BBValue("H", "avg_solar_current_A", cnv.cnv_mA_to_A),
+        BBValue("H", "avg_solar_current_A", cnv.cnv_8mA_to_A), # type 3
         # bytes 17+ 8: solar charger status: aktiv, standby, reduced
         BBValue("B", "solar_charger_status", cnv.cnv_solar_status),
         # bytes 17+ 9-10: 16-bit average battery current 100 mA
@@ -229,15 +233,32 @@ BCLiveMeasurementsFrameExtended = BBFrame(
     ],
 )
 
-BCLiveMeasurementsFrame_0A = BBFrame(
+def accumulateSameFieldNames(raw_values):
+    """
+    post processing function to add fields with the same output_id
+    used for adding an extra MSB field for an existing field
+    """
+    output = []
+    for field, raw_value in raw_values:
+        found = False
+        for i, (existing_field, existing_raw_value) in enumerate(output):
+            if existing_field.output_id == field.output_id:
+                value = field.value(raw_value)
+                output[i] = (existing_field, existing_raw_value + value)
+                found = True
+                break
+        if not found:
+            output.append((field, raw_value))
+    return output
+
+BCLiveMeasurementsFrameLargeSolarCurrent = BBFrame(
     output_id="live/measurement_ext",
     fields=BCLiveMeasurementsFrameExtended.fields
     + [
         # 1 byte MSB solar charge current
-        # ... 65.536 A per bit..
-        # FIXME: how to add this to "solar_charge_current_A" in place???
-        BBValue("B", "solar_charge_current_up_A", lambda x : x * 0x10000 / 1000),
+        BBValue("B", "solar_charge_current_A", lambda x : x << 16),
     ],
+    preprocess=accumulateSameFieldNames,
 )
 
 BCSolarChargerEBLFrame = BBFrame(
@@ -299,19 +320,20 @@ BCSolarChargerExtendedFrame = BBFrame(
 
 BCSolarChargerLargeSolarCurrent = BBFrame(
     output_id="live/solar_charger_ext",
-    fields=BCSolarChargerStandardFrame.fields
+    fields=BCSolarChargerExtendedFrame.fields
     + [
-		#1 byte phase bits [0:3]: onyl valid when (status solar charger & 0x18 > 0)
+        #1 byte phase bits [0:3]: onyl valid when (status solar charger & 0x18 > 0)
         #     0: Bulk
         #     1: Absorption
         #     2: Float
         #     3: Care
-        BBValue("B", "solar_charger_phase", cnv.cnv_charger_phase),
-		#1 byte (09) MSB [23:16] solar max current per day (>= V418)
-		BBValue("B", "max_solar_current_day_up_A", lambda x: x * 0x10000 / 1000),
-		#1 byte (19) MSB [23:16] solar charge (>= V418)
-		BBValue("B", "solar_charge_day_up_Ah", lambda x: x * 0x10000 / 100),
-	],
+        BBValue("B", "solar_charger_phase"),# cnv.cnv_charger_phase),
+        #1 byte (09) MSB [23:16] solar max current per day (>= V418)
+        BBValue("B", "max_solar_current_day_A", lambda x: x << 16),
+        #1 byte (19) MSB [23:16] solar charge (>= V418)
+        BBValue("B", "solar_charge_day_Ah", lambda x: x << 16),
+    ],
+    preprocess=accumulateSameFieldNames,
 )
 
 BCBatteryComputer1Frame = BBFrame(

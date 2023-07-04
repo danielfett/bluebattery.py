@@ -67,17 +67,22 @@ class BBFrame:
     output_id: str  # note: may contain placeholders for output field values
     fields: List[BBValue]
     postprocess: Optional[Callable] = None
+    preprocess: Optional[Callable] = None
 
     def format(self):
         return BYTE_ORDER + "".join(field.get_struct() for field in self.fields)
 
     def process(self, characteristic, value):
+
         non_ignore_fields = filter(
             lambda field: type(field) is not BBValueIgnore, self.fields
         )
 
         # field values, raw from the struct unpacking
         raw_values = zip(non_ignore_fields, struct.unpack_from(self.format(), value))
+
+        if self.preprocess:
+            raw_values = self.preprocess(raw_values)
 
         """
         Frames with multiple sub-frames may contain the same field name twice. Once
