@@ -396,6 +396,14 @@ BCIntradayLogEntryFrame = BBFrame(
     ],
 )
 
+BCIntradayLogEntryFrameExtended = BBFrame(
+    output_id="live/intraday_log",
+    fields= BCIntradayLogEntryFrame.fields
+    + [
+        BBValue("B", "log_type"),
+    ],
+)
+
 BCNoBoosterDataFrame = BBFrame(
     output_id="live/info",
     fields=[
