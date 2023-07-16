@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="bluebattery.py",
-    version="1.0.1",
+    version="1.0.2b0",
     author="Daniel Fett",
     author_email="mail@danielfett.de",
     description="Software for interacting with the BlueBattery line of battery computers.",
