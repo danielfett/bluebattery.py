@@ -7,6 +7,10 @@ from .commands import (
     BBValueIgnore,
 )
 
+import logging
+
+log = logging.getLogger("Frametypes")
+
 SecFrame = BBFrame(output_id="sec", fields=[BBValue("i", "time_of_day_s")])
 
 
@@ -157,6 +161,53 @@ LogEntryFrameNew = BBFrame(
     postprocess=add_reverse_day_counter,
 )
 
+LogEntryFrameLargeSolarCurrent = BBFrame(
+    output_id="log/day/-{days_ago}/extended",
+    fields=[
+        # bytes 0-1: 16-bit day counter (relative to current day in frame type 0x00)
+        BBValue("H", "day_counter"),
+        # bytes 2-3: 16-bit wall time in seconds/2
+        BBValue("H", "wall_time", lambda value: value * 2),
+        # bytes 4-5: 16-bit average battery voltage mV
+        BBValue("H", "avg_battery_voltage_V", cnv.cnv_mV_to_V),
+        # bytes 6-7: 16-bit average solar current mA
+        BBValue("H", "avg_solar_current_A", cnv.cnv_8mA_to_A), # type 3
+        # bytes 8: solar charger status: aktiv, standby, reduced
+        BBValue("B", "solar_charger_status", cnv.cnv_solar_status),
+        # bytes 9-10: 16-bit average battery current 100 mA
+        BBValue("H", "avg_battery_current_A", cnv.cnv_100mA_to_A),
+        # bytes 11-12: 16-bit battery SOC 100 mAh
+        BBValue("H", "battery_state_of_charge_A", cnv.cnv_mA_to_A),
+        # bytes 13-14: 16-bit booster average input voltage 10mV (starter)**
+        BBValue("H", "avg_booster_input_voltage_V", cnv.cnv_10mV_to_V),
+        # bytes 15-16: signed 16-bit booster average current 100 mA**
+        BBValue("h", "avg_booster_current_A", cnv.cnv_100mA_to_A),
+        # bytes 17+ 0-1: 16-bit day counter (relative to current day in frame type 0x00)
+        BBValue("H", "day_counter"),
+        # bytes 17+ 2-3: 16-bit wall time in seconds/2
+        BBValue("H", "wall_time", lambda value: value * 2),
+        # bytes 17+ 4-5: 16-bit average battery voltage mV
+        BBValue("H", "avg_battery_voltage_V", cnv.cnv_mV_to_V),
+        # bytes 17+ 6-7: 16-bit average solar current mA
+        BBValue("H", "avg_solar_current_A", cnv.cnv_8mA_to_A), # type 3
+        # bytes 17+ 8: solar charger status: aktiv, standby, reduced
+        BBValue("B", "solar_charger_status", cnv.cnv_solar_status),
+        # bytes 17+ 9-10: 16-bit average battery current 100 mA
+        BBValue("H", "avg_battery_current_A", cnv.cnv_100mA_to_A),
+        # bytes 17+ 11-12: 16-bit battery SOC 100 mAh
+        BBValue("H", "battery_state_of_charge_A", cnv.cnv_mA_to_A),
+        # bytes 17+ 13-14: 16-bit booster average input voltage 10mV (starter)**
+        BBValue("H", "avg_booster_input_voltage_V", cnv.cnv_10mV_to_V),
+        # bytes 17+ 15-16: signed 16-bit booster average current 100 mA**
+        BBValue("h", "avg_booster_current_A", cnv.cnv_100mA_to_A),
+        # bytes 34-35: reserved
+        BBValueIgnore(2),
+        # byte 36: 8-bit frame type 0x01
+        BBValueIgnore(),
+    ],
+    postprocess=add_reverse_day_counter,
+)
+
 
 BCLiveMeasurementsFrame = BBFrame(
     output_id="live/measurement",
@@ -180,6 +231,34 @@ BCLiveMeasurementsFrameExtended = BBFrame(
         # 2 bytes optional heap size in bytes
         BBValue("H", "heap_size_bytes"), 
     ],
+)
+
+def accumulateSameFieldNames(raw_values):
+    """
+    post processing function to add fields with the same output_id
+    used for adding an extra MSB field for an existing field
+    """
+    output = []
+    for field, raw_value in raw_values:
+        found = False
+        for i, (existing_field, existing_raw_value) in enumerate(output):
+            if existing_field.output_id == field.output_id:
+                value = field.value(raw_value)
+                output[i] = (existing_field, existing_raw_value + value)
+                found = True
+                break
+        if not found:
+            output.append((field, raw_value))
+    return output
+
+BCLiveMeasurementsFrameLargeSolarCurrent = BBFrame(
+    output_id="live/measurement_ext",
+    fields=BCLiveMeasurementsFrameExtended.fields
+    + [
+        # 1 byte MSB solar charge current
+        BBValue("B", "solar_charge_current_A", lambda x : x << 16),
+    ],
+    preprocess=accumulateSameFieldNames,
 )
 
 BCSolarChargerEBLFrame = BBFrame(
@@ -237,6 +316,24 @@ BCSolarChargerExtendedFrame = BBFrame(
         #  bit 7: reserved
         BBValue("B", "relay_status", RelayStatus),
     ],
+)
+
+BCSolarChargerLargeSolarCurrent = BBFrame(
+    output_id="live/solar_charger_ext",
+    fields=BCSolarChargerExtendedFrame.fields
+    + [
+        #1 byte phase bits [0:3]: onyl valid when (status solar charger & 0x18 > 0)
+        #     0: Bulk
+        #     1: Absorption
+        #     2: Float
+        #     3: Care
+        BBValue("B", "solar_charger_phase"),# cnv.cnv_charger_phase),
+        #1 byte (09) MSB [23:16] solar max current per day (>= V418)
+        BBValue("B", "max_solar_current_day_A", lambda x: x << 16),
+        #1 byte (19) MSB [23:16] solar charge (>= V418)
+        BBValue("B", "solar_charge_day_Ah", lambda x: x << 16),
+    ],
+    preprocess=accumulateSameFieldNames,
 )
 
 BCBatteryComputer1Frame = BBFrame(
@@ -299,6 +396,14 @@ BCIntradayLogEntryFrame = BBFrame(
     ],
 )
 
+BCIntradayLogEntryFrameExtended = BBFrame(
+    output_id="live/intraday_log",
+    fields= BCIntradayLogEntryFrame.fields
+    + [
+        BBValue("B", "log_type"),
+    ],
+)
+
 BCNoBoosterDataFrame = BBFrame(
     output_id="live/info",
     fields=[
@@ -324,4 +429,30 @@ BCBoosterDataFrame = BBFrame(
         # TODO: unsigned
         BBValue("¾", "total_booster_charge_day_Ah", lambda x: x * (256 / 18000)),
     ],
+)
+
+BCBoosterDataFrameExtended = BBFrame(
+	output_id="live/booster",
+	fields=BCBoosterDataFrame.fields
+	+ [
+		#1 byte limit mode: 0x00: unknown, 0x01: off, 0x02: on
+		BBValue("B", "booster_limit"),
+		#1 byte phase bits [0:3]: only valid when (status booster & 0xc0 > 0)
+        #    0: Bulk
+        #    1: Absorption
+        #    2: Float
+        #    3: Care
+        BBValue("B", "booster_phase", cnv.cnv_charger_phase),
+	],
+)
+
+BCBoosterDataFrameExtendedBBX = BBFrame(
+	output_id="live/booster",
+	fields=BCBoosterDataFrameExtended.fields
+	+ [
+		#2 bytes value analog board voltage***
+		BBValue("H", "analog_board_voltage_V", cnv.cnv_mV_to_V),
+		#2 bytes value analog starter voltage***
+		BBValue("H", "analog_starter_voltage_V", cnv.cnv_mV_to_V),
+	],
 )
