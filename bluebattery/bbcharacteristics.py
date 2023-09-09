@@ -108,7 +108,7 @@ class BCSec(ReadPeriodicCharacteristic):
 
 class BCLive(ReadPeriodicCharacteristic):
     UUID = "4b616912-40bd-428b-bf06-698e5e422cd9"
-    PERIOD = 1
+    PERIOD = 0.33
 
     def parse(self, data):
         yield from BBFrameTypeSwitch(
