@@ -84,6 +84,10 @@ service/bluebattery/FC:45:C3:CA:FF:EE/live/info/starter_battery_voltage_V 12.43
 ```
 
 
+Use `--prefix BBX` to pass a specific device name. In this example, `BBX`.
+
+For using the bb_mqtt as daemon [described here](asDaemon.md)
+
 ## Troubleshooting
 
 Depending on your environment, you may need to enable BLE first or to set up your linux user to allow using BLE:

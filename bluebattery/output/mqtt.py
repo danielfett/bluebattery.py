@@ -17,7 +17,7 @@ class MQTTOutput:
             help="MQTT broker hostname (default: localhost)",
         )
         mqtt_parser.add_argument(
-            "--port", default=1883, help="MQTT broker port (default: 1883)"
+            "--port", default=1883, type=int, help="MQTT broker port (default: 1883)"
         )
         mqtt_parser.add_argument(
             "--username", default=None, help="MQTT broker username (default: None)"
