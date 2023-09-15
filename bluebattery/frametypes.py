@@ -225,7 +225,7 @@ BCLiveMeasurementsFrame = BBFrame(
 )
 
 BCLiveMeasurementsFrameExtended = BBFrame(
-    output_id="live/measurement_ext",
+    output_id="live/measurement",
     fields=BCLiveMeasurementsFrame.fields
     + [
         # 2 bytes optional heap size in bytes
@@ -252,7 +252,7 @@ def accumulateSameFieldNames(raw_values):
     return output
 
 BCLiveMeasurementsFrameLargeSolarCurrent = BBFrame(
-    output_id="live/measurement_ext",
+    output_id="live/measurement",
     fields=BCLiveMeasurementsFrameExtended.fields
     + [
         # 1 byte MSB solar charge current
