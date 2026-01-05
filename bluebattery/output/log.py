@@ -1,5 +1,6 @@
 import logging
 
+
 class LogOutput:
     @staticmethod
     def add_subparser(parser):
@@ -7,6 +8,9 @@ class LogOutput:
 
     def __init__(self, args):
         self.log = logging.getLogger("output.log")
+
+    def callback_device_connected(self, device):
+        self.log.info(f"Device connected: {device.address}")
 
     def callback(self, device, data):
         frame, output_id, output_data = data

@@ -23,6 +23,7 @@ class BBValue:
     struct: str
     output_id: str
     conversion_fn: Optional[Callable] = None
+    ha_details: Optional[Dict] = None  # details for Home Assistant integration
 
     def value(self, raw_value: Union[bytes, int, float]) -> Union[int, float, str]:
         """Converts a raw_value resulting from unpacking a struct into a value usable for an application.
@@ -33,6 +34,7 @@ class BBValue:
         Returns:
             Union[int, float, str]: Parsed value
         """
+
         if self.struct == "¾":
             assert isinstance(raw_value, bytes)
             raw_value_unsigned = struct.unpack(">I", b"\x00" + raw_value)[0]
@@ -68,6 +70,7 @@ class BBFrame:
     fields: List[BBValue]
     postprocess: Optional[Callable] = None
     preprocess: Optional[Callable] = None
+    ha_name_postfix: Optional[str] = None  # optional postfix for HA entity names
 
     def format(self):
         return BYTE_ORDER + "".join(field.get_struct() for field in self.fields)

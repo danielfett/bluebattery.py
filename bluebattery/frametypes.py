@@ -171,7 +171,7 @@ LogEntryFrameLargeSolarCurrent = BBFrame(
         # bytes 4-5: 16-bit average battery voltage mV
         BBValue("H", "avg_battery_voltage_V", cnv.cnv_mV_to_V),
         # bytes 6-7: 16-bit average solar current mA
-        BBValue("H", "avg_solar_current_A", cnv.cnv_8mA_to_A), # type 3
+        BBValue("H", "avg_solar_current_A", cnv.cnv_8mA_to_A),  # type 3
         # bytes 8: solar charger status: aktiv, standby, reduced
         BBValue("B", "solar_charger_status", cnv.cnv_solar_status),
         # bytes 9-10: 16-bit average battery current 100 mA
@@ -189,7 +189,7 @@ LogEntryFrameLargeSolarCurrent = BBFrame(
         # bytes 17+ 4-5: 16-bit average battery voltage mV
         BBValue("H", "avg_battery_voltage_V", cnv.cnv_mV_to_V),
         # bytes 17+ 6-7: 16-bit average solar current mA
-        BBValue("H", "avg_solar_current_A", cnv.cnv_8mA_to_A), # type 3
+        BBValue("H", "avg_solar_current_A", cnv.cnv_8mA_to_A),  # type 3
         # bytes 17+ 8: solar charger status: aktiv, standby, reduced
         BBValue("B", "solar_charger_status", cnv.cnv_solar_status),
         # bytes 17+ 9-10: 16-bit average battery current 100 mA
@@ -216,11 +216,47 @@ BCLiveMeasurementsFrame = BBFrame(
         # byte 1: length
         BBValueIgnore(2),
         # 2 bytes (17) value battery voltage in mV
-        BBValue("H", "battery_voltage_V", cnv.cnv_mV_to_V),
+        BBValue(
+            "H",
+            "battery_voltage_V",
+            cnv.cnv_mV_to_V,
+            ha_details={
+                "platform": "sensor",
+                "name": "Battery Voltage",
+                "device_class": "voltage",
+                "unit_of_measurement": "V",
+                "suggested_display_precision": 2,
+                "state_class": "measurement",
+            },
+        ),
         # 2 bytes (18) value solar charge current in mA**
-        BBValue("H", "solar_charge_current_A", cnv.cnv_mA_to_A),
+        BBValue(
+            "H",
+            "solar_charge_current_A",
+            cnv.cnv_mA_to_A,
+            ha_details={
+                "platform": "sensor",
+                "name": "Solar Charge Current",
+                "device_class": "current",
+                "unit_of_measurement": "A",
+                "suggested_display_precision": 2,
+                "state_class": "measurement",
+            },
+        ),
         # 3 bytes (00) value Battery Current in mA
-        BBValue("¾", "battery_current_A", cnv.cnv_mA_to_A),
+        BBValue(
+            "¾",
+            "battery_current_A",
+            cnv.cnv_mA_to_A,
+            ha_details={
+                "platform": "sensor",
+                "name": "Battery Current",
+                "device_class": "current",
+                "unit_of_measurement": "A",
+                "suggested_display_precision": 2,
+                "state_class": "measurement",
+            },
+        ),
     ],
 )
 
@@ -229,9 +265,10 @@ BCLiveMeasurementsFrameExtended = BBFrame(
     fields=BCLiveMeasurementsFrame.fields
     + [
         # 2 bytes optional heap size in bytes
-        BBValue("H", "heap_size_bytes"), 
+        BBValue("H", "heap_size_bytes"),
     ],
 )
+
 
 def accumulateSameFieldNames(raw_values):
     """
@@ -251,12 +288,13 @@ def accumulateSameFieldNames(raw_values):
             output.append((field, raw_value))
     return output
 
+
 BCLiveMeasurementsFrameLargeSolarCurrent = BBFrame(
     output_id="live/measurement",
     fields=BCLiveMeasurementsFrameExtended.fields
     + [
         # 1 byte MSB solar charge current
-        BBValue("B", "solar_charge_current_A", lambda x : x << 16),
+        BBValue("B", "solar_charge_current_A", lambda x: x << 16),
     ],
     preprocess=accumulateSameFieldNames,
 )
@@ -268,15 +306,71 @@ BCSolarChargerEBLFrame = BBFrame(
         # byte 1: length
         BBValueIgnore(2),
         # 2 bytes (09) value Solar max Current per day in mA
-        BBValue("H", "max_solar_current_day_A", cnv.cnv_mA_to_A),
+        BBValue(
+            "H",
+            "max_solar_current_day_A",
+            cnv.cnv_mA_to_A,
+            ha_details={
+                "platform": "sensor",
+                "name": "Max Solar Current Today (EBL)",
+                "device_class": "current",
+                "unit_of_measurement": "A",
+                "suggested_display_precision": 2,
+                "enabled_by_default": False,
+            },
+        ),
         # 2 bytes (10) value Solar max Watt per day in 1W  use 95% efficiency
-        BBValue("H", "max_solar_watt_day_W", lambda value: value / 0.95),
+        BBValue(
+            "H",
+            "max_solar_watt_day_W",
+            lambda value: value / 0.95,
+            ha_details={
+                "platform": "sensor",
+                "name": "Max Solar Power Today (EBL)",
+                "device_class": "power",
+                "unit_of_measurement": "W",
+                "suggested_display_precision": 0,
+                "enabled_by_default": False,
+            },
+        ),
         # 2 bytes (19) value solar charge in 10mAh (*)
-        BBValue("H", "solar_charge_day_Ah", cnv.cnv_10mAh_to_Ah),
+        BBValue(
+            "H",
+            "solar_charge_day_Ah",
+            cnv.cnv_10mAh_to_Ah,
+            ha_details={
+                "platform": "sensor",
+                "name": "Solar Charge Today (EBL)",
+                "unit_of_measurement": "Ah",
+                "suggested_display_precision": 0,
+                "enabled_by_default": False,
+                "state_class": "total_increasing",
+            },
+        ),
         # 2 bytes (20) value solar energy in Wh
-        BBValue("H", "solar_energy_day_Wh"),
+        BBValue(
+            "H",
+            "solar_energy_day_Wh",
+            ha_details={
+                "platform": "sensor",
+                "name": "Solar Energy Today (EBL)",
+                "device_class": "energy",
+                "unit_of_measurement": "Wh",
+                "suggested_display_precision": 0,
+                "enabled_by_default": False,
+                "state_class": "total_increasing",
+            },
+        ),
         # 1 byte (21) status solar charger (*) bit 7 indicates sleep
-        BBValue("B", "solar_charger_status"),
+        BBValue(
+            "B",
+            "solar_charger_status",
+            ha_details={
+                "platform": "sensor",
+                "name": "Solar Charger Status (EBL)",
+                "enabled_by_default": False,
+            },
+        ),
     ],
 )
 
@@ -285,7 +379,20 @@ BCSolarChargerStandardFrame = BBFrame(
     fields=BCSolarChargerEBLFrame.fields
     + [
         # 2 bytes (22) value solar PV module voltage in 10 mV (*)
-        BBValue("H", "solar_module_voltage_V", cnv.cnv_10mV_to_V),
+        BBValue(
+            "H",
+            "solar_module_voltage_V",
+            cnv.cnv_10mV_to_V,
+            ha_details={
+                "platform": "sensor",
+                "name": "Solar Module Voltage",
+                "device_class": "voltage",
+                "unit_of_measurement": "V",
+                "suggested_display_precision": 2,
+                "enabled_by_default": False,
+                "state_class": "measurement",
+            },
+        ),
     ],
 )
 
@@ -299,6 +406,10 @@ class RelayStatus(Flags):
     trigger_solar_current = ()
     trigger_time = ()
     reserved = ()
+
+    # def __str__(self):
+    #    active_flags = [name for name, active in self.__dir__.items() if active and name != "reserved"]
+    #    return ",".join(active_flags) if active_flags else "off"
 
 
 BCSolarChargerExtendedFrame = BBFrame(
@@ -322,16 +433,48 @@ BCSolarChargerLargeSolarCurrent = BBFrame(
     output_id="live/solar_charger_ext",
     fields=BCSolarChargerExtendedFrame.fields
     + [
-        #1 byte phase bits [0:3]: onyl valid when (status solar charger & 0x18 > 0)
+        # 1 byte phase bits [0:3]: onyl valid when (status solar charger & 0x18 > 0)
         #     0: Bulk
         #     1: Absorption
         #     2: Float
         #     3: Care
-        BBValue("B", "solar_charger_phase"),# cnv.cnv_charger_phase),
-        #1 byte (09) MSB [23:16] solar max current per day (>= V418)
-        BBValue("B", "max_solar_current_day_A", lambda x: x << 16),
-        #1 byte (19) MSB [23:16] solar charge (>= V418)
-        BBValue("B", "solar_charge_day_Ah", lambda x: x << 16),
+        BBValue(
+            "B",
+            "solar_charger_phase",
+            ha_details={
+                "platform": "sensor",
+                "name": "Solar Charger Phase",
+                "enabled_by_default": False,
+            },
+        ),
+        # 1 byte (09) MSB [23:16] solar max current per day (>= V418)
+        BBValue(
+            "B",
+            "max_solar_current_day_A",
+            lambda x: x << 16,
+            ha_details={
+                "platform": "sensor",
+                "name": "Max Solar Current Today",
+                "device_class": "current",
+                "unit_of_measurement": "A",
+                "suggested_display_precision": 2,
+                "enabled_by_default": False,
+            },
+        ),
+        # 1 byte (19) MSB [23:16] solar charge (>= V418)
+        BBValue(
+            "B",
+            "solar_charge_day_Ah",
+            lambda x: x << 16,
+            ha_details={
+                "platform": "sensor",
+                "name": "Solar Charge Today",
+                "unit_of_measurement": "Ah",
+                "suggested_display_precision": 0,
+                "enabled_by_default": False,
+                "state_class": "total_increasing",
+            },
+        ),
     ],
     preprocess=accumulateSameFieldNames,
 )
@@ -343,21 +486,115 @@ BCBatteryComputer1Frame = BBFrame(
         # byte 1: length
         BBValueIgnore(2),
         # 2 bytes (01) value Battery Charge in 10mAh (*)
-        BBValue("H", "battery_charge_Ah", cnv.cnv_10mAh_to_Ah),
+        BBValue(
+            "H",
+            "battery_charge_Ah",
+            cnv.cnv_10mAh_to_Ah,
+            ha_details={
+                "platform": "sensor",
+                "name": "Battery Charge",
+                "unit_of_measurement": "Ah",
+                "suggested_display_precision": 0,
+                "enabled_by_default": False,
+                "state_class": "measurement",
+            },
+        ),
         # 2 bytes (02) value SOC in 0.1% steps
-        BBValue("H", "state_of_charge_percent", lambda x: x / 10),
+        BBValue(
+            "H",
+            "state_of_charge_percent",
+            lambda x: x / 10,
+            ha_details={
+                "platform": "sensor",
+                "name": "State of Charge",
+                "device_class": "battery",
+                "unit_of_measurement": "%",
+                "suggested_display_precision": 0,
+                "state_class": "measurement",
+            },
+        ),
         # 2 bytes (03) value Battery max Current per day in 10mA (*)
-        BBValue("H", "max_battery_current_day_A", cnv.cnv_10mA_to_A),
+        BBValue(
+            "H",
+            "max_battery_current_day_A",
+            cnv.cnv_10mA_to_A,
+            ha_details={
+                "platform": "sensor",
+                "name": "Max Battery Current Today",
+                "device_class": "current",
+                "unit_of_measurement": "A",
+                "suggested_display_precision": 2,
+                "enabled_by_default": False,
+            },
+        ),
         # 2 bytes (04) value Battery min Current per day in 10mA (*)
-        BBValue("H", "min_battery_current_day_A", lambda x: x / -10),
+        BBValue(
+            "H",
+            "min_battery_current_day_A",
+            lambda x: x / -10,
+            ha_details={
+                "platform": "sensor",
+                "name": "Min Battery Current Today",
+                "device_class": "current",
+                "unit_of_measurement": "A",
+                "suggested_display_precision": 2,
+                "enabled_by_default": False,
+            },
+        ),
         # 2 bytes (05) value Battery max Charge per day in 10mAh
-        BBValue("H", "max_battery_charge_day_Ah", cnv.cnv_10mAh_to_Ah),
+        BBValue(
+            "H",
+            "max_battery_charge_day_Ah",
+            cnv.cnv_10mAh_to_Ah,
+            ha_details={
+                "platform": "sensor",
+                "name": "Max Battery Charge Today",
+                "unit_of_measurement": "Ah",
+                "suggested_display_precision": 0,
+                "enabled_by_default": False,
+            },
+        ),
         # 2 bytes (06) value Battery min Charge per day in 10mAh
-        BBValue("H", "min_battery_charge_day_Ah", cnv.cnv_10mAh_to_Ah),
+        BBValue(
+            "H",
+            "min_battery_charge_day_Ah",
+            cnv.cnv_10mAh_to_Ah,
+            ha_details={
+                "platform": "sensor",
+                "name": "Min Battery Charge Today",
+                "unit_of_measurement": "Ah",
+                "suggested_display_precision": 0,
+                "enabled_by_default": False,
+            },
+        ),
         # 2 bytes (07) value Battery max Voltage per day in mV
-        BBValue("H", "max_battery_voltage_day_V", cnv.cnv_mV_to_V),
+        BBValue(
+            "H",
+            "max_battery_voltage_day_V",
+            cnv.cnv_mV_to_V,
+            ha_details={
+                "platform": "sensor",
+                "name": "Max Battery Voltage Today",
+                "device_class": "voltage",
+                "unit_of_measurement": "V",
+                "suggested_display_precision": 2,
+                "enabled_by_default": False,
+            },
+        ),
         # 2 bytes (08) value Battery min Voltage per day in mV
-        BBValue("H", "min_battery_voltage_day_V", cnv.cnv_mV_to_V),
+        BBValue(
+            "H",
+            "min_battery_voltage_day_V",
+            cnv.cnv_mV_to_V,
+            ha_details={
+                "platform": "sensor",
+                "name": "Min Battery Voltage Today",
+                "device_class": "voltage",
+                "unit_of_measurement": "V",
+                "suggested_display_precision": 2,
+                "enabled_by_default": False,
+            },
+        ),
     ],
 )
 
@@ -368,20 +605,92 @@ BCBatteryComputer2Frame = BBFrame(
         # byte 1: length
         BBValueIgnore(2),
         # 2 bytes (11) value Temperature in °C binary offset
-        BBValue("H", "temperature_deg_C", cnv.cnv_bb_temp_to_deg_c),
+        BBValue(
+            "H",
+            "temperature_deg_C",
+            cnv.cnv_bb_temp_to_deg_c,
+            ha_details={
+                "platform": "sensor",
+                "name": "Battery Temperature",
+                "device_class": "temperature",
+                "unit_of_measurement": "°C",
+                "suggested_display_precision": 1,
+                "state_class": "measurement",
+            },
+        ),
         # 2 bytes (12) value min Temperature per day in °C binary offset
-        BBValue("H", "min_temperature_deg_C", cnv.cnv_bb_temp_to_deg_c),
+        BBValue(
+            "H",
+            "min_temperature_deg_C",
+            cnv.cnv_bb_temp_to_deg_c,
+            ha_details={
+                "platform": "sensor",
+                "name": "Min Temperature Today",
+                "device_class": "temperature",
+                "unit_of_measurement": "°C",
+                "suggested_display_precision": 1,
+                "enabled_by_default": False,
+            },
+        ),
         # 2 bytes (13) value max Temperature per day in °C binary offset
-        BBValue("H", "max_temperature_deg_C", cnv.cnv_bb_temp_to_deg_c),
+        BBValue(
+            "H",
+            "max_temperature_deg_C",
+            cnv.cnv_bb_temp_to_deg_c,
+            ha_details={
+                "platform": "sensor",
+                "name": "Max Temperature Today",
+                "device_class": "temperature",
+                "unit_of_measurement": "°C",
+                "suggested_display_precision": 1,
+                "enabled_by_default": False,
+            },
+        ),
         # 3 bytes (14) value summed total charge per day in 32/225 mAh (*)
         # TODO: unsigned
-        BBValue("¾", "total_charge_day_Ah", lambda x: (x * (32 / 225)) / 1000),
+        BBValue(
+            "¾",
+            "total_charge_day_Ah",
+            lambda x: (x * (32 / 225)) / 1000,
+            ha_details={
+                "platform": "sensor",
+                "name": "Total Charge Today",
+                "unit_of_measurement": "Ah",
+                "suggested_display_precision": 0,
+                "enabled_by_default": False,
+                "state_class": "total_increasing",
+            },
+        ),
         # 3 bytes (15) value summed total discharge per day in 32/225 mAh (*)
         # TODO: unsigned
-        BBValue("¾", "total_discharge_day_Ah", lambda x: (x * (32 / 225)) / 1000),
+        BBValue(
+            "¾",
+            "total_discharge_day_Ah",
+            lambda x: (x * (32 / 225)) / 1000,
+            ha_details={
+                "platform": "sensor",
+                "name": "Total Discharge Today",
+                "unit_of_measurement": "Ah",
+                "suggested_display_precision": 0,
+                "enabled_by_default": False,
+                "state_class": "total_increasing",
+            },
+        ),
         # 3 bytes (16) value summed total external charge per in 32/225 mAh (*)
         # TODO: unsigned
-        BBValue("¾", "total_external_charge_day_Ah", lambda x: (x * (32 / 225)) / 1000),
+        BBValue(
+            "¾",
+            "total_external_charge_day_Ah",
+            lambda x: (x * (32 / 225)) / 1000,
+            ha_details={
+                "platform": "sensor",
+                "name": "Total External Charge Today",
+                "unit_of_measurement": "Ah",
+                "suggested_display_precision": 0,
+                "enabled_by_default": False,
+                "state_class": "total_increasing",
+            },
+        ),
     ],
 )
 
@@ -398,7 +707,7 @@ BCIntradayLogEntryFrame = BBFrame(
 
 BCIntradayLogEntryFrameExtended = BBFrame(
     output_id="live/intraday_log",
-    fields= BCIntradayLogEntryFrame.fields
+    fields=BCIntradayLogEntryFrame.fields
     + [
         BBValue("B", "log_type"),
     ],
@@ -411,9 +720,33 @@ BCNoBoosterDataFrame = BBFrame(
         # byte 1: length
         BBValueIgnore(2),
         # 2 bytes value output voltage in 10 mV (Board Battery)**
-        BBValue("H", "battery_voltage_V", cnv.cnv_10mV_to_V),
+        BBValue(
+            "H",
+            "battery_voltage_V",
+            cnv.cnv_10mV_to_V,
+            ha_details={
+                "platform": "sensor",
+                "name": "Battery Voltage",
+                "device_class": "voltage",
+                "unit_of_measurement": "V",
+                "suggested_display_precision": 2,
+                "state_class": "measurement",
+            },
+        ),
         # 2 bytes value input voltage in 10 mV (Starter Battery)**
-        BBValue("H", "starter_battery_voltage_V", cnv.cnv_10mV_to_V),
+        BBValue(
+            "H",
+            "starter_battery_voltage_V",
+            cnv.cnv_10mV_to_V,
+            ha_details={
+                "platform": "sensor",
+                "name": "Starter Battery Voltage",
+                "device_class": "voltage",
+                "unit_of_measurement": "V",
+                "suggested_display_precision": 2,
+                "state_class": "measurement",
+            },
+        ),
     ],
 )
 
@@ -422,37 +755,135 @@ BCBoosterDataFrame = BBFrame(
     fields=BCNoBoosterDataFrame.fields
     + [
         # 2 bytes signed value charge current in 100 mA (Booster current)
-        BBValue("H", "booster_charge_current_A", cnv.cnv_100mA_to_A),
+        BBValue(
+            "H",
+            "booster_charge_current_A",
+            cnv.cnv_100mA_to_A,
+            ha_details={
+                "platform": "sensor",
+                "name": "Booster Charge Current",
+                "device_class": "current",
+                "unit_of_measurement": "A",
+                "suggested_display_precision": 2,
+                "state_class": "measurement",
+            },
+        ),
         # 1 byte status booster
-        BBValue("B", "booster_status"),
+        BBValue(
+            "B",
+            "booster_status",
+            ha_details={
+                "platform": "sensor",
+                "name": "Booster Status",
+                "enabled_by_default": False,
+            },
+        ),
         # 3 bytes value summed total booster charge per day in 256/18000 Ah
         # TODO: unsigned
-        BBValue("¾", "total_booster_charge_day_Ah", lambda x: x * (256 / 18000)),
+        BBValue(
+            "¾",
+            "total_booster_charge_day_Ah",
+            lambda x: x * (256 / 18000),
+            ha_details={
+                "platform": "sensor",
+                "name": "Total Booster Charge Today",
+                "unit_of_measurement": "Ah",
+                "suggested_display_precision": 0,
+                "enabled_by_default": False,
+                "state_class": "total_increasing",
+            },
+        ),
     ],
 )
 
 BCBoosterDataFrameExtended = BBFrame(
-	output_id="live/booster",
-	fields=BCBoosterDataFrame.fields
-	+ [
-		#1 byte limit mode: 0x00: unknown, 0x01: off, 0x02: on
-		BBValue("B", "booster_limit"),
-		#1 byte phase bits [0:3]: only valid when (status booster & 0xc0 > 0)
+    output_id="live/booster",
+    fields=BCBoosterDataFrame.fields
+    + [
+        # 1 byte limit mode: 0x00: unknown, 0x01: off, 0x02: on
+        BBValue(
+            "B",
+            "booster_limit",
+            ha_details={
+                "platform": "sensor",
+                "name": "Booster Limit Mode",
+                "enabled_by_default": False,
+            },
+        ),
+        # 1 byte phase bits [0:3]: only valid when (status booster & 0xc0 > 0)
         #    0: Bulk
         #    1: Absorption
         #    2: Float
         #    3: Care
-        BBValue("B", "booster_phase", cnv.cnv_charger_phase),
-	],
+        BBValue(
+            "B",
+            "booster_phase",
+            cnv.cnv_charger_phase,
+            ha_details={
+                "platform": "sensor",
+                "name": "Booster Phase",
+                "enabled_by_default": False,
+            },
+        ),
+    ],
 )
 
 BCBoosterDataFrameExtendedBBX = BBFrame(
-	output_id="live/booster",
-	fields=BCBoosterDataFrameExtended.fields
-	+ [
-		#2 bytes value analog board voltage***
-		BBValue("H", "analog_board_voltage_V", cnv.cnv_mV_to_V),
-		#2 bytes value analog starter voltage***
-		BBValue("H", "analog_starter_voltage_V", cnv.cnv_mV_to_V),
-	],
+    output_id="live/booster",
+    fields=BCBoosterDataFrameExtended.fields
+    + [
+        # 2 bytes value analog board voltage***
+        BBValue(
+            "H",
+            "analog_board_voltage_V",
+            cnv.cnv_mV_to_V,
+            ha_details={
+                "platform": "sensor",
+                "name": "Analog Board Voltage",
+                "device_class": "voltage",
+                "unit_of_measurement": "V",
+                "suggested_display_precision": 2,
+                "enabled_by_default": False,
+                "state_class": "measurement",
+            },
+        ),
+        # 2 bytes value analog starter voltage***
+        BBValue(
+            "H",
+            "analog_starter_voltage_V",
+            cnv.cnv_mV_to_V,
+            ha_details={
+                "platform": "sensor",
+                "name": "Analog Starter Voltage",
+                "device_class": "voltage",
+                "unit_of_measurement": "V",
+                "suggested_display_precision": 2,
+                "enabled_by_default": False,
+                "state_class": "measurement",
+            },
+        ),
+    ],
 )
+
+ALL_FRAME_TYPES = [
+    SecFrame,
+    LogEntryDaysFrame,
+    LogEntryFrameOld,
+    LogEntryFrameNew,
+    LogEntryFrameLargeSolarCurrent,
+    BCLiveMeasurementsFrame,
+    BCLiveMeasurementsFrameExtended,
+    BCLiveMeasurementsFrameLargeSolarCurrent,
+    BCSolarChargerEBLFrame,
+    BCSolarChargerStandardFrame,
+    BCSolarChargerExtendedFrame,
+    BCSolarChargerLargeSolarCurrent,
+    BCBatteryComputer1Frame,
+    BCBatteryComputer2Frame,
+    BCIntradayLogEntryFrame,
+    BCIntradayLogEntryFrameExtended,
+    BCNoBoosterDataFrame,
+    BCBoosterDataFrame,
+    BCBoosterDataFrameExtended,
+    BCBoosterDataFrameExtendedBBX,
+]

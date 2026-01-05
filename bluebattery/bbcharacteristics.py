@@ -1,4 +1,4 @@
-import asyncio 
+import asyncio
 from concurrent.futures import CancelledError
 
 from . import frametypes
@@ -32,7 +32,9 @@ class BCLog(ReadPeriodicCharacteristic):
                 while True:
                     # read characteristic
                     data = await self.client.read_gatt_char(self.UUID)
-                    self.log.debug(f"Read {self.UUID}: {' '.join(f'{b:02x}' for b in data)}")
+                    self.log.debug(
+                        f"Read {self.UUID}: {' '.join(f'{b:02x}' for b in data)}"
+                    )
 
                     parsed = self.parse(data)
 
@@ -68,7 +70,7 @@ class BCLog(ReadPeriodicCharacteristic):
         self.log_info["frames_seen"] += 1
         if self.log_info["frames_seen"] == self.MAX_LOG_FRAMES:
             return True
-            
+
         if not self.log_info["first_frametype_seen"]:
             self.log_info["first_frametype_seen"] = frametype
             self.log_info["first_day_seen"] = values["day_counter"]
@@ -83,15 +85,14 @@ class BCLog(ReadPeriodicCharacteristic):
 
     def parse(self, data):
         yield from BBFrameTypeSwitch(
-        "36xB",  # 36th byte is the frame type indicator
-        {
-            (0x00,): frametypes.LogEntryDaysFrame,
-            (0x01,): frametypes.LogEntryFrameOld,
-            (0x02,): frametypes.LogEntryFrameNew,
-            (0x03,): frametypes.LogEntryFrameLargeSolarCurrent, ###KS
-        },
+            "36xB",  # 36th byte is the frame type indicator
+            {
+                (0x00,): frametypes.LogEntryDaysFrame,
+                (0x01,): frametypes.LogEntryFrameOld,
+                (0x02,): frametypes.LogEntryFrameNew,
+                (0x03,): frametypes.LogEntryFrameLargeSolarCurrent,  ###KS
+            },
         ).process(self, data)
-
 
 
 class BCSec(ReadPeriodicCharacteristic):

@@ -8,11 +8,13 @@ Features:
 - [x] Publishes value to an MQTT broker
 - [x] Auto-discovery of BB devices
 - [x] Access to stored logs
+- [x] Homeassistant support
 - [ ] Modification of device settings
 - [ ] Firmware update
 
 ## Changelog
 
+2026-01-05: Support for Homeassistant
 2023-01-14: Moved to bleak library. This should make the software much more reliable. Multiple devices are now supported and the MQTT topic has changed to include the device address.
 
 ## Installation

@@ -11,17 +11,22 @@ def cnv_10mV_to_V(_10mV):
 
 cnv_10mA_to_A = cnv_10mV_to_V
 
+
 def cnv_10mAh_to_Ah(_10mAh):
-    return _10mAh / 100 
+    return _10mAh / 100
+
 
 def cnv_mA_to_A(mA):
     return mA / 1000
 
+
 def cnv_8mA_to_A(_8mA):
-	return _8mA / 125
+    return _8mA / 125
+
 
 def cnv_100mA_to_A(_100mA):
     return _100mA / 10
+
 
 cnv_100mV_to_V = cnv_100mA_to_A
 
@@ -37,10 +42,8 @@ def cnv_bb_temp_to_deg_c(bb_temp):
 def cnv_solar_status(status):
     return {0: "active", 1: "standby", 2: "reduced"}.get(status, "unknown")
 
+
 def cnv_charger_phase(phase):
-	return {
-		0: "bulk",
-		1: "absorption",
-		2: "float",
-		3: "care"
-	}.get(phase & 0x0f, "unknown")
+    return {0: "bulk", 1: "absorption", 2: "float", 3: "care"}.get(
+        phase & 0x0F, "unknown"
+    )
