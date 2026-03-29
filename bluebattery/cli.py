@@ -14,7 +14,7 @@ from hummable.scanner import Scanner
 KNOWN_DEVICES = (BlueBattery,)
 
 
-async def run():
+async def _run():
     # Parse command line arguments, use subparsers from log and mqtt.
 
     parser = argparse.ArgumentParser(description="BlueBattery Service")
@@ -62,4 +62,8 @@ async def run():
 
 
 if __name__ == "__main__":
-    asyncio.run(run())
+    asyncio.run(_run())
+
+
+def run():
+    asyncio.run(_run())
