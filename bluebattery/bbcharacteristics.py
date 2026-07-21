@@ -1,5 +1,4 @@
 import asyncio
-from concurrent.futures import CancelledError
 
 from . import frametypes
 from .commands import BBFrameTypeSwitch
@@ -55,7 +54,7 @@ class BCLog(ReadPeriodicCharacteristic):
                     # wait a second before continuing reading
                     await asyncio.sleep(self.PERIOD)
                 await asyncio.sleep(self.WAIT_BETWEEN)
-        except CancelledError:
+        except asyncio.CancelledError:
             self.log.debug("Task cancelled")
         except Exception as e:
             self.log.exception("Error reading characteristic")
