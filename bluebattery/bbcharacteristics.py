@@ -3,7 +3,7 @@ from concurrent.futures import CancelledError
 
 from . import frametypes
 from .commands import BBFrameTypeSwitch
-from hummable.characteristics import ReadPeriodicCharacteristic
+from hummable.characteristics import GATT_OPERATION_TIMEOUT, ReadPeriodicCharacteristic
 
 
 class BCLog(ReadPeriodicCharacteristic):
@@ -31,7 +31,9 @@ class BCLog(ReadPeriodicCharacteristic):
                 self.reset_log_info()
                 while True:
                     # read characteristic
-                    data = await self.client.read_gatt_char(self.UUID)
+                    data = await asyncio.wait_for(
+                        self.client.read_gatt_char(self.UUID), GATT_OPERATION_TIMEOUT
+                    )
                     self.log.debug(
                         f"Read {self.UUID}: {' '.join(f'{b:02x}' for b in data)}"
                     )

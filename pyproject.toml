@@ -7,12 +7,12 @@ readme = "README.md"
 packages = [{include = "bluebattery"}]
 
 [tool.poetry.dependencies]
-python = "^3.7"
-bleak = "^0.19.5"
+python = "^3.10"
+bleak = "^3.0.2"
 py-flags = "^1.1.4"
 coloredlogs = "^15.0.1"
 paho-mqtt = "^1.6.1"
-hummable = "^0.1.0"
+hummable = "^0.2.0"
 
 
 [build-system]
