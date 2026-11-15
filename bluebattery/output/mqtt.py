@@ -5,6 +5,7 @@ An MQTT output plugin to publish data to an MQTT broker.
 import asyncio
 import logging
 import json
+import time
 
 import paho.mqtt.client as mqtt
 
@@ -14,6 +15,13 @@ from bluebattery.ha_sensors import Device, Sensor, clean_string
 
 class MQTTOutput:
     SERVICE_NAME = "bluebattery_py"
+
+    # The connection status is otherwise only published when the BLE link
+    # goes up or down. Consumers that use a silence timeout (e.g. the miqro
+    # alarm service) would then consider a long-lived, healthy connection
+    # as stale. While data is flowing, re-publish "connected = 1" at least
+    # this often (seconds).
+    STATUS_HEARTBEAT_INTERVAL = 5 * 60
 
     @staticmethod
     def add_subparser(parser):
@@ -46,16 +54,18 @@ class MQTTOutput:
     def __init__(self, args):
         self.log = logging.getLogger("output.mqtt")
         self.ha_devices = {}
+        self.last_status_publish = {}
         self.data_topic_prefix = args.topic
         self.willtopic = f"{self.data_topic_prefix}online"
         self.client = mqtt.Client(args.client_id)
         if args.username:
             self.client.username_pw_set(args.username, args.password)
+        # The last will must be set *before* connecting, otherwise the broker
+        # never learns about it.
+        self.client.will_set(self.willtopic, "0", retain=True)
         self.client.connect(args.host, args.port)
         self.client.loop_start()
 
-        # publish to the "online" topic as last will
-        self.client.will_set(self.willtopic, "0", retain=True)
         self.client.publish(self.willtopic, "1", retain=True)
 
     def callback(self, device, data):
@@ -65,12 +75,30 @@ class MQTTOutput:
             self.log.info(f"Creating Home Assistant device for {device.address}")
             self.create_ha_device(device)
 
+        if output_id == "status":
+            self.last_status_publish[device.address] = time.monotonic()
+            # retain, so that consumers (re)starting later see the current state
+            self.publish_status(device, output_data, retain=True)
+            return
+
+        # Data is flowing, so the device is connected - publish a heartbeat.
+        last = self.last_status_publish.get(device.address, 0)
+        if time.monotonic() - last > self.STATUS_HEARTBEAT_INTERVAL:
+            self.last_status_publish[device.address] = time.monotonic()
+            self.publish_status(device, {"connected": 1}, retain=True)
+
         for key, value in output_data.items():
             topic = f"{self.data_topic_prefix}{device.address}/{output_id}/{key}"
             if type(value) not in (str, int, float):
                 value = str(value)
             self.log.debug(f"Publishing {topic} = {value}")
             self.client.publish(topic, value, retain=False)
+
+    def publish_status(self, device, output_data, retain):
+        for key, value in output_data.items():
+            topic = f"{self.data_topic_prefix}{device.address}/status/{key}"
+            self.log.debug(f"Publishing {topic} = {value}")
+            self.client.publish(topic, value, retain=retain)
 
     def publish_json(self, topic, payload, qos=0, retain=False):
         self.log.debug(f"Publishing JSON to {topic}: {payload}")
