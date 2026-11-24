@@ -63,10 +63,19 @@ class MQTTOutput:
         # The last will must be set *before* connecting, otherwise the broker
         # never learns about it.
         self.client.will_set(self.willtopic, "0", retain=True)
+        # Announce "online" on every (re)connect, not only once at startup:
+        # paho reconnects on its own (e.g. after a broker restart), and the
+        # broker may have published the last will "0" in between.
+        self.client.on_connect = self._on_connect
         self.client.connect(args.host, args.port)
         self.client.loop_start()
 
-        self.client.publish(self.willtopic, "1", retain=True)
+    def _on_connect(self, client, userdata, flags, rc):
+        if rc != 0:
+            self.log.warning(f"MQTT connection refused (rc={rc})")
+            return
+        self.log.info("MQTT connected, publishing online status")
+        client.publish(self.willtopic, "1", retain=True)
 
     def callback(self, device, data):
         frame, output_id, output_data = data
